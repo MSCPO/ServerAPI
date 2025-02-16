@@ -1,5 +1,3 @@
-from typing import ClassVar
-
 from pydantic import BaseModel, Field
 
 from .models import Server
