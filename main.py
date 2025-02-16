@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import HTTPNotFoundError
 
 from app import crud
@@ -18,6 +19,13 @@ async def startup(_: FastAPI):
 
 
 app = FastAPI(lifespan=startup)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],  # Allows all origins
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 @app.get("/servers", response_model=list)
