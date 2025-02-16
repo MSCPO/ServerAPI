@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pydantic import BaseModel, Field
 
 from .models import Server
@@ -25,31 +27,6 @@ class ServerShow(BaseModel):
     is_hide: bool = Field(
         ..., title="是否隐藏", description="服务器是否为隐藏状态，隐藏时部分信息不显示"
     )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "id": 1,
-                "name": "My Minecraft Server",
-                "ip": "192.168.1.1",
-                "type": "Minecraft",
-                "version": "1.16.5",
-                "desc": "一个极具挑战性的Minecraft生存服务器。",
-                "link": "http://example.com",
-                "is_member": True,
-                "auth_mode": "official",
-                "tags": ["生存", "多人", "挑战"],
-                "is_hide": False,
-            }
-        }
-
-
-server_show_schema = ServerShow.schema()
-
-# 输出 JSON Schema
-import json
-
-print(json.dumps(server_show_schema, indent=2))
 
 
 async def get_servers(limit: int | None = None, offset: int = 0) -> list[ServerShow]:
