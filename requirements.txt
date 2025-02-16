@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+loguru
+tortoise-orm
+python-dotenv
+pydantic-settings
+ujson
+aiomysql
