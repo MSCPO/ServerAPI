@@ -1,11 +1,11 @@
-import random as func_random
+import random
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Query
 from tortoise.contrib.fastapi import HTTPNotFoundError
 
-from app import crud, models
+from app import crud
 from app.db import disconnect, init_db
 
 
@@ -20,26 +20,25 @@ async def startup(_: FastAPI):
 app = FastAPI(lifespan=startup)
 
 
-@app.get("/servers", response_model=list[models.ServerBase])
+@app.get("/servers", response_model=list)
 async def list_servers(
-    random: bool = Query(True),
-    limit: int = Query(10, ge=1),  # 默认每次返回10条
-    offset: int = Query(0, ge=0),  # 从第多少条开始返回
+    limit: int | None = Query(None, ge=1),
+    offset: int = Query(0, ge=0),
 ):
+    return await crud.get_servers(limit=limit, offset=offset)
+
+
+@app.get("/servers/random", response_model=list)
+async def list_random_servers():
     servers = await crud.get_servers()
-    if random:
-        func_random.shuffle(servers)  # 打乱列表
-
-    # 分页
-    return servers[offset : offset + limit]
+    random.shuffle(servers)
+    return servers
 
 
-@app.get("/servers/{server_id}", response_model=models.ServerBase)
+@app.get("/servers/{server_id}", response_model=dict | HTTPNotFoundError)
 async def get_server(server_id: int):
     server = await crud.get_server_by_id(server_id)
-    if not server:
-        raise HTTPNotFoundError(f"Server with ID {server_id} not found")
-    return server
+    return server or HTTPNotFoundError(detail="Server not found")
 
 
 if __name__ == "__main__":
