@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .models import Server, ServerStats
+from .models import Server, ServerStatus
 
 
 class Motd(BaseModel):
@@ -10,7 +10,7 @@ class Motd(BaseModel):
     ansi: str = Field(..., title="motd ANSI", description="motd ANSI")
 
 
-class get_ServerStats_api(BaseModel):
+class get_ServerStatus_api(BaseModel):
     players: dict[str, int] = Field(
         ..., title="在线玩家数量", description="在线玩家数量"
     )
@@ -52,7 +52,7 @@ class get_ServerShow_api(BaseModel):
 
 
 class get_ServerId_Show_api(get_Server):
-    stats: get_ServerStats_api | None = Field(
+    status: get_ServerStatus_api | None = Field(
         ..., title="服务器状态", description="服务器的在线状态信息"
     )
 
@@ -90,7 +90,7 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Ser
 
 async def get_server_by_id(server_id: int) -> None | get_Server:
     server = await Server.get_or_none(id=server_id)
-    server_stats = await ServerStats.get_or_none(server=server)
+    server_status = await ServerStatus.get_or_none(server=server)
     if server:
         return get_ServerId_Show_api(
             id=server.id,
@@ -104,19 +104,19 @@ async def get_server_by_id(server_id: int) -> None | get_Server:
             auth_mode=server.auth_mode,
             tags=server.tags,
             is_hide=server.is_hide,
-            stats=get_ServerStats_api(
-                players=server_stats.stat_data["players"],
-                delay=server_stats.stat_data["delay"],
-                version=server_stats.stat_data["version"],
+            status=get_ServerStatus_api(
+                players=server_status.stat_data["players"],
+                delay=server_status.stat_data["delay"],
+                version=server_status.stat_data["version"],
                 motd=Motd(
-                    plain=server_stats.stat_data["motd"]["plain"],
-                    html=server_stats.stat_data["motd"]["html"],
-                    minecraft=server_stats.stat_data["motd"]["minecraft"],
-                    ansi=server_stats.stat_data["motd"]["ansi"],
+                    plain=server_status.stat_data["motd"]["plain"],
+                    html=server_status.stat_data["motd"]["html"],
+                    minecraft=server_status.stat_data["motd"]["minecraft"],
+                    ansi=server_status.stat_data["motd"]["ansi"],
                 ),
-                icon=server_stats.stat_data["icon"],
+                icon=server_status.stat_data["icon"],
             )
-            if server_stats and server_stats.stat_data
+            if server_status and server_status.stat_data
             else None,
         )
     return None
@@ -124,4 +124,4 @@ async def get_server_by_id(server_id: int) -> None | get_Server:
 
 print(get_ServerId_Show_api.schema())
 # print(get_ServerShow_api.schema())
-# print(get_ServerStats_api.schema())
+# print(get_Serverstatus_api.schema())

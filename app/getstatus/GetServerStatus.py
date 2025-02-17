@@ -1,7 +1,7 @@
 import asyncio
 
 from .. import logger
-from ..models import Server, ServerStats
+from ..models import Server, ServerStatus
 from .MineStatus import get_server_stats
 
 
@@ -20,7 +20,7 @@ async def query_server_periodically(server: Server):
     while True:
         logger.info(f"Querying server {server.name} ({server.ip})")
         newstats = await get_server_stats(server.ip, server.type)
-        stats, _ = await ServerStats.get_or_create(server=server)
+        stats, _ = await ServerStatus.get_or_create(server=server)
         stats.stat_data = newstats
         await stats.save()
         await asyncio.sleep(300)

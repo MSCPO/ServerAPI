@@ -45,7 +45,7 @@ class Server(Model):
         anystr_strip_whitespace = True  # 自动去除字符串字段的空白字符
 
 
-class ServerStats(Model):
+class ServerStatus(Model):
     server = fields.ForeignKeyField("default.Server", related_name="stats")
     timestamp = fields.DatetimeField(auto_now_add=True)
     stat_data = fields.JSONField(default=dict, null=True)  # 用于存储查询结果
