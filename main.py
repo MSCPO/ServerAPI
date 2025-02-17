@@ -3,9 +3,8 @@ import random
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from tortoise.contrib.fastapi import HTTPNotFoundError
 
 from app import crud
 from app.db import disconnect, init_db
@@ -31,7 +30,7 @@ app.add_middleware(
 )
 
 
-@app.get("/servers", response_model=list[crud.get_ServerShow_api])
+@app.get("/servers", response_model=crud.get_ServerShow_api)
 async def list_servers(
     limit: int | None = Query(None, ge=1),
     offset: int = Query(0, ge=0),
@@ -39,20 +38,22 @@ async def list_servers(
     return await crud.get_servers(limit=limit, offset=offset)
 
 
-@app.get("/servers/random", response_model=list[crud.get_ServerShow_api])
+@app.get("/servers/random", response_model=crud.get_ServerShow_api)
 async def list_random_servers():
-    servers = await crud.get_servers()
-    random.shuffle(servers)
+    servers: crud.get_ServerShow_api = await crud.get_servers()
+    random.shuffle(servers.server_list)
     return servers
 
 
 @app.get(
-    "/servers/{server_id}",
-    response_model=crud.get_ServerId_Show_api | HTTPNotFoundError,
+    "/servers/info/{server_id}",
+    response_model=crud.get_ServerId_Show_api,
 )
 async def get_server(server_id: int):
     server = await crud.get_server_by_id(server_id)
-    return server or HTTPNotFoundError(detail="Server not found")
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server not found")
+    return server
 
 
 if __name__ == "__main__":

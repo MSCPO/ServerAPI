@@ -20,7 +20,10 @@ class get_ServerStats_api(BaseModel):
     icon: None | str = Field(None, title="图标", description="服务器的图标")
 
 
-class get_ServerShow_api(BaseModel):
+# 输出json schema
+
+
+class get_Server(BaseModel):
     id: int = Field(..., title="服务器ID", description="服务器的唯一标识符")
     name: str = Field(..., title="服务器名称", description="服务器的名称")
     ip: None | str = Field(
@@ -44,25 +47,29 @@ class get_ServerShow_api(BaseModel):
     )
 
 
-class get_ServerId_Show_api(get_ServerShow_api):
+class get_ServerShow_api(BaseModel):
+    server_list: list[get_Server] = Field(
+        ..., title="服务器列表", description="服务器列表"
+    )  # type: ignore
+    total: int = Field(..., title="服务器总数", description="服务器的总数")
+
+
+class get_ServerId_Show_api(get_Server):
     stats: get_ServerStats_api | None = Field(
         ..., title="服务器状态", description="服务器的在线状态信息"
     )
 
 
-async def get_servers(
-    limit: int | None = None, offset: int = 0
-) -> list[get_ServerShow_api]:
+async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Server]:
     # 获取符合条件的服务器数据，分页处理
     server_query = Server.all().offset(offset)
     if limit:
         server_query = server_query.limit(limit)
 
-    server_list: list[Server] = await server_query
+    server_result: list[Server] = await server_query
 
-    # 使用 Pydantic 模型进行数据序列化
-    return [
-        get_ServerShow_api(
+    server_list = [
+        get_Server(
             id=server.id,
             name=server.name,
             ip=None if server.is_hide else server.ip,
@@ -75,11 +82,16 @@ async def get_servers(
             tags=server.tags,
             is_hide=server.is_hide,
         )
-        for server in server_list
+        for server in server_result
     ]
 
+    return get_ServerShow_api(
+        server_list=server_list,
+        total=len(server_list),
+    )
 
-async def get_server_by_id(server_id: int) -> None | get_ServerShow_api:
+
+async def get_server_by_id(server_id: int) -> None | get_Server:
     server = await Server.get_or_none(id=server_id)
     server_stats = await ServerStats.get_or_none(server=server)
     if server:
@@ -111,3 +123,8 @@ async def get_server_by_id(server_id: int) -> None | get_ServerShow_api:
             else None,
         )
     return None
+
+
+print(get_ServerId_Show_api.schema())
+# print(get_ServerShow_api.schema())
+# print(get_ServerStats_api.schema())
