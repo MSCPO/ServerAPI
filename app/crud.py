@@ -20,9 +20,6 @@ class get_ServerStats_api(BaseModel):
     icon: None | str = Field(None, title="图标", description="服务器的图标")
 
 
-# 输出json schema
-
-
 class get_Server(BaseModel):
     id: int = Field(..., title="服务器ID", description="服务器的唯一标识符")
     name: str = Field(..., title="服务器名称", description="服务器的名称")
@@ -50,8 +47,8 @@ class get_Server(BaseModel):
 class get_ServerShow_api(BaseModel):
     server_list: list[get_Server] = Field(
         ..., title="服务器列表", description="服务器列表"
-    )  # type: ignore
-    total: int = Field(..., title="服务器总数", description="服务器的总数")
+    )
+    total_member: int = Field(..., title="服务器总数", description="服务器的总数")
 
 
 class get_ServerId_Show_api(get_Server):
@@ -62,11 +59,11 @@ class get_ServerId_Show_api(get_Server):
 
 async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Server]:
     # 获取符合条件的服务器数据，分页处理
-    server_query = Server.all().offset(offset)
+    server_query = await Server.all().offset(offset)
     if limit:
-        server_query = server_query.limit(limit)
+        server_query = await server_query.limit(limit)
 
-    server_result: list[Server] = await server_query
+    server_result: list[Server] = server_query
 
     server_list = [
         get_Server(
@@ -87,7 +84,7 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Ser
 
     return get_ServerShow_api(
         server_list=server_list,
-        total=len(server_list),
+        total_member=len(await Server.filter(is_member=True)),
     )
 
 
