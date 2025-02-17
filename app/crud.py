@@ -59,10 +59,10 @@ class get_ServerId_Show_api(get_Server):
 
 async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Server]:
     # 获取符合条件的服务器数据，分页处理
-    server_query = await Server.all().offset(offset)
     if limit:
-        server_query = await server_query.limit(limit)
-
+        server_query = await Server.all().offset(offset).limit(limit)
+    else:
+        server_query = await Server.all().offset(offset)
     server_result: list[Server] = server_query
 
     server_list = [
