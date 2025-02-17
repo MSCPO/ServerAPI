@@ -1,8 +1,8 @@
 from tortoise import Tortoise
 from ujson import dumps
 
-from .config import settings
 from . import logger
+from .config import settings
 
 # 数据库连接配置
 DATABASE = {

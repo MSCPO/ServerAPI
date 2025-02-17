@@ -1,3 +1,4 @@
+import asyncio
 import random
 from contextlib import asynccontextmanager
 
@@ -8,12 +9,14 @@ from tortoise.contrib.fastapi import HTTPNotFoundError
 
 from app import crud
 from app.db import disconnect, init_db
+from app.getstatus.GetServerStatus import query_servers_periodically
 
 
 @asynccontextmanager
 async def startup(_: FastAPI):
     # 初始化数据库连接
     await init_db()
+    asyncio.create_task(query_servers_periodically())
     yield
     await disconnect()
 
@@ -28,7 +31,7 @@ app.add_middleware(
 )
 
 
-@app.get("/servers", response_model=list)
+@app.get("/servers", response_model=list[crud.get_ServerShow_api])
 async def list_servers(
     limit: int | None = Query(None, ge=1),
     offset: int = Query(0, ge=0),
@@ -36,14 +39,17 @@ async def list_servers(
     return await crud.get_servers(limit=limit, offset=offset)
 
 
-@app.get("/servers/random", response_model=list)
+@app.get("/servers/random", response_model=list[crud.get_ServerShow_api])
 async def list_random_servers():
     servers = await crud.get_servers()
     random.shuffle(servers)
     return servers
 
 
-@app.get("/servers/{server_id}", response_model=dict | HTTPNotFoundError)
+@app.get(
+    "/servers/{server_id}",
+    response_model=crud.get_ServerId_Show_api | HTTPNotFoundError,
+)
 async def get_server(server_id: int):
     server = await crud.get_server_by_id(server_id)
     return server or HTTPNotFoundError(detail="Server not found")

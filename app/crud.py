@@ -1,9 +1,26 @@
 from pydantic import BaseModel, Field
 
-from .models import Server
+from .models import Server, ServerStats
 
 
-class ServerShow(BaseModel):
+class Motd(BaseModel):
+    plain: str = Field(..., title="motd纯文本", description="motd纯文本")
+    html: str = Field(..., title="motd HTML", description="motd HTML")
+    minecraft: str = Field(..., title="motd Minecraft", description="motd Minecraft")
+    ansi: str = Field(..., title="motd ANSI", description="motd ANSI")
+
+
+class get_ServerStats_api(BaseModel):
+    players: dict[str, int] = Field(
+        ..., title="在线玩家数量", description="在线玩家数量"
+    )
+    delay: float = Field(None, title="延迟", description="服务器的延迟")
+    version: str = Field(..., title="版本", description="服务器的版本")
+    motd: Motd = Field(..., title="MOTD", description="服务器的MOTD")
+    icon: None | str = Field(None, title="图标", description="服务器的图标")
+
+
+class get_ServerShow_api(BaseModel):
     id: int = Field(..., title="服务器ID", description="服务器的唯一标识符")
     name: str = Field(..., title="服务器名称", description="服务器的名称")
     ip: None | str = Field(
@@ -27,7 +44,15 @@ class ServerShow(BaseModel):
     )
 
 
-async def get_servers(limit: int | None = None, offset: int = 0) -> list[ServerShow]:
+class get_ServerId_Show_api(get_ServerShow_api):
+    stats: get_ServerStats_api | None = Field(
+        ..., title="服务器状态", description="服务器的在线状态信息"
+    )
+
+
+async def get_servers(
+    limit: int | None = None, offset: int = 0
+) -> list[get_ServerShow_api]:
     # 获取符合条件的服务器数据，分页处理
     server_query = Server.all().offset(offset)
     if limit:
@@ -37,7 +62,7 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[ServerS
 
     # 使用 Pydantic 模型进行数据序列化
     return [
-        ServerShow(
+        get_ServerShow_api(
             id=server.id,
             name=server.name,
             ip=None if server.is_hide else server.ip,
@@ -54,10 +79,11 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[ServerS
     ]
 
 
-async def get_server_by_id(server_id: int) -> None | ServerShow:
+async def get_server_by_id(server_id: int) -> None | get_ServerShow_api:
     server = await Server.get_or_none(id=server_id)
+    server_stats = await ServerStats.get_or_none(server=server)
     if server:
-        return ServerShow(
+        return get_ServerId_Show_api(
             id=server.id,
             name=server.name,
             ip=None if server.is_hide else server.ip,
@@ -69,5 +95,19 @@ async def get_server_by_id(server_id: int) -> None | ServerShow:
             auth_mode=server.auth_mode,
             tags=server.tags,
             is_hide=server.is_hide,
+            stats=get_ServerStats_api(
+                players=server_stats.stat_data["players"],
+                delay=server_stats.stat_data["delay"],
+                version=server_stats.stat_data["version"],
+                motd=Motd(
+                    plain=server_stats.stat_data["motd"]["plain"],
+                    html=server_stats.stat_data["motd"]["html"],
+                    minecraft=server_stats.stat_data["motd"]["minecraft"],
+                    ansi=server_stats.stat_data["motd"]["ansi"],
+                ),
+                icon=server_stats.stat_data["icon"],
+            )
+            if server_stats and server_stats.stat_data
+            else None,
         )
     return None
