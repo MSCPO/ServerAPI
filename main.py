@@ -1,5 +1,4 @@
 import asyncio
-import random
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -15,7 +14,7 @@ from app.getstatus.GetServerStatus import query_servers_periodically
 async def startup(_: FastAPI):
     # 初始化数据库连接
     await init_db()
-    asyncio.create_task(query_servers_periodically())
+    asyncio.create_task(query_servers_periodically())  # noqa: RUF006
     yield
     await disconnect()
 
@@ -36,13 +35,6 @@ async def list_servers(
     offset: int = Query(0, ge=0),
 ):
     return await crud.get_servers(limit=limit, offset=offset)
-
-
-@app.get("/servers/random", response_model=crud.get_ServerShow_api)
-async def list_random_servers():
-    servers: crud.get_ServerShow_api = await crud.get_servers()
-    random.shuffle(servers.server_list)
-    return servers
 
 
 @app.get(
