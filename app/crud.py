@@ -59,13 +59,20 @@ class get_ServerId_Show_api(get_Server):
 
 
 async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Server]:
-    # 获取符合条件的服务器数据，分页处理
-    if limit:
-        server_query = await Server.all().offset(offset).limit(limit)
-    else:
-        server_query = await Server.all().offset(offset)
-    server_result: list[Server] = server_query
+    server_query = await Server.all()
 
+    # 计算总数
+    total_member = sum(bool(server.is_member)
+                   for server in server_query)
+    total_servers = len(server_query)
+
+    # 如果有分页需求，应用 limit 和 offset
+    if limit:
+        server_query = server_query[offset : offset + limit]
+    else:
+        server_query = server_query[offset:]
+
+    # 生成服务器列表
     server_list = [
         get_Server(
             id=server.id,
@@ -80,13 +87,12 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Ser
             tags=server.tags,
             is_hide=server.is_hide,
         )
-        for server in server_result
+        for server in server_query
     ]
 
+    # 返回数据
     return get_ServerShow_api(
-        server_list=server_list,
-        total_member=len(await Server.filter(is_member=True)),
-        total=len(await Server.all())
+        server_list=server_list, total_member=total_member, total=total_servers
     )
 
 
