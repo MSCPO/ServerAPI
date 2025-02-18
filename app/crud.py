@@ -62,8 +62,7 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Ser
     server_query = await Server.all()
 
     # 计算总数
-    total_member = sum(bool(server.is_member)
-                   for server in server_query)
+    total_member = sum(bool(server.is_member) for server in server_query)
     total_servers = len(server_query)
 
     # 如果有分页需求，应用 limit 和 offset
@@ -128,8 +127,3 @@ async def get_server_by_id(server_id: int) -> None | get_Server:
             else None,
         )
     return None
-
-
-print(get_ServerId_Show_api.schema())
-# print(get_ServerShow_api.schema())
-# print(get_ServerStatus_api.schema())
