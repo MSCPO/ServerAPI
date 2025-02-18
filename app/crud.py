@@ -48,7 +48,8 @@ class get_ServerShow_api(BaseModel):
     server_list: list[get_Server] = Field(
         ..., title="服务器列表", description="服务器列表"
     )
-    total_member: int = Field(..., title="服务器总数", description="服务器的总数")
+    total_member: int = Field(..., title="成员服总数", description="成员服的总数")
+    total: int = Field(..., title="服务器总数", description="服务器的总数")
 
 
 class get_ServerId_Show_api(get_Server):
@@ -85,6 +86,7 @@ async def get_servers(limit: int | None = None, offset: int = 0) -> list[get_Ser
     return get_ServerShow_api(
         server_list=server_list,
         total_member=len(await Server.filter(is_member=True)),
+        total=len(await Server.all())
     )
 
 
@@ -124,4 +126,4 @@ async def get_server_by_id(server_id: int) -> None | get_Server:
 
 print(get_ServerId_Show_api.schema())
 # print(get_ServerShow_api.schema())
-# print(get_Serverstatus_api.schema())
+# print(get_ServerStatus_api.schema())
