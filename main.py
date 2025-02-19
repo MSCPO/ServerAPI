@@ -81,7 +81,7 @@ async def login(user: UserLogin):
 
 @app.get("/hcaptcha-site-key")
 def get_hcaptcha_site_key():
-    if site_key := settings.HCAPTCHA_SECRET_KEY:
+    if site_key := settings.HCAPTCHA_SITE_KEY:
         return {"hcaptcha_site_key": site_key}
     else:
         return JSONResponse(
