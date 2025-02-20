@@ -38,11 +38,6 @@ class Server(Model):
     class Meta:
         table = "server"
 
-    class Config:
-        orm_mode = True  # 支持从 ORM 模型（如数据库）到 Pydantic 模型的转换
-        min_anystr_length = 1  # 强制非空字符串字段的最小长度为1
-        anystr_strip_whitespace = True  # 自动去除字符串字段的空白字符
-
 
 class ServerStatus(Model):
     server = fields.ForeignKeyField("default.Server", related_name="stats")
