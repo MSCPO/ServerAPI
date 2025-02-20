@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     RECAPTCHA_SECRET_KEY: str
     SECRET: str
     MIRROR_URL: str | None = None
+    S3_ENDPOINT_URL: str
+    S3_ACCESS_KEY: str
+    S3_SECRET_KEY: str
+    S3_BUCKET: str
 
     class Config:
         env_file = ".env"
