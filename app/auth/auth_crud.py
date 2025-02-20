@@ -1,28 +1,15 @@
 import httpx
 from passlib.context import CryptContext
-from pydantic import BaseModel
 from tortoise.exceptions import DoesNotExist
 
-from .. import logger
-from ..config import settings
-from ..models import User
+from app import logger
+from app.config import settings
+from app.auth.models import User
 
 # 密码加密和验证工具
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
-
-
-class UserInDB(BaseModel):
-    username: str
-    email: str
-    hashed_password: str
-
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-    captcha_response: str
 
 
 # 获取用户信息

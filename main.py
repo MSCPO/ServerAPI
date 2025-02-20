@@ -5,11 +5,11 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.auth import router as auth_router
-from app.api.servers import router as serves_router
-from app.api.webhook import router as webhook_router
 from app.db import disconnect, init_db
-from app.getstatus.GetServerStatus import query_servers_periodically
+from app.router.auth import router as auth_router
+from app.router.servers import router as serves_router
+from app.router.webhook import router as webhook_router
+from app.servers.GetServerStatus import query_servers_periodically
 
 
 @asynccontextmanager
@@ -30,8 +30,8 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.include_router(serves_router, prefix="/servers/v1", tags=["servers"])
-app.include_router(auth_router, prefix="/auth/v1", tags=["auth"])
+app.include_router(serves_router, prefix="/v1", tags=["servers"])
+app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
 
 app.include_router

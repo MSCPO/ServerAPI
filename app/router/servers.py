@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-from .. import crud
+from app.servers.crud import GetServer_by_id, GetServers
+from app.servers.schemas import GetServerIdShowAPI, GetServerShowAPI
 
 router = APIRouter()
 
@@ -8,7 +9,7 @@ router = APIRouter()
 # 获取服务器列表
 @router.get(
     "/servers",
-    response_model=crud.get_ServerShow_api,
+    response_model=GetServerShowAPI,
     summary="获取服务器列表",
     responses={
         200: {
@@ -44,13 +45,13 @@ async def list_servers(
 
     返回值为服务器列表，包含基本的服务器信息。
     """
-    return await crud.get_servers(limit=limit, offset=offset)
+    return await GetServers(limit=limit, offset=offset)
 
 
 # 获取服务器的具体信息
 @router.get(
     "/servers/info/{server_id}",
-    response_model=crud.get_ServerId_Show_api,
+    response_model=GetServerIdShowAPI,
     summary="获取对应服务器具体信息",
     responses={
         200: {
@@ -80,7 +81,7 @@ async def get_server(server_id: int):
 
     返回指定服务器的详细信息，如无法找到该服务器，则返回404。
     """
-    server = await crud.get_server_by_id(server_id)
+    server = await GetServer_by_id(server_id)
     if server is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"

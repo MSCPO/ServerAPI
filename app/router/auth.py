@@ -1,14 +1,21 @@
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from app.auth.auth import create_access_token
 from app.auth.auth_crud import (
-    UserLogin,
     get_user_by_username,
     verify_hcaptcha,
     verify_password,
 )
+from app.auth.schemas import UserLogin
 from app.config import settings
+
+
+class Auth_Token(BaseModel):
+    access_token: str = Field(..., title="访问令牌", description="JWT 访问令牌")
+    token_type: str = Field(..., title="令牌类型", description="令牌类型")
+
 
 router = APIRouter()
 
@@ -16,7 +23,7 @@ router = APIRouter()
 # 用户登录，获取 token
 @router.post(
     "/login",
-    response_model=dict,
+    response_model=Auth_Token,
     summary="token 获取",
     responses={
         200: {
@@ -68,10 +75,15 @@ async def login(user: UserLogin):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+class hcapcha_sitekey(BaseModel):
+    hcaptcha_site_key: str
+
+
 # 获取 Hcaptcha site-key
 @router.get(
     "/hcaptcha-site-key",
     summary="获取Hcaptcha site-key",
+    response_model=hcapcha_sitekey,
     responses={
         200: {
             "description": "成功获取 hCaptcha site-key",

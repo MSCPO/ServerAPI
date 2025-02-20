@@ -6,8 +6,8 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from ..config import settings
-from ..log import logger
+from app.config import settings
+from app.log import logger
 
 router = APIRouter()
 
