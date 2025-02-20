@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 from app.auth.auth import create_access_token
 from app.auth.auth_crud import (
     get_user_by_username,
-    verify_hcaptcha,
     verify_password,
+    verify_recaptcha,
 )
 from app.auth.schemas import UserLogin
 from app.config import settings
@@ -14,7 +14,7 @@ from app.config import settings
 
 class Auth_Token(BaseModel):
     access_token: str = Field(..., title="访问令牌", description="JWT 访问令牌")
-    token_type: str = Field(..., title="令牌类型", description="令牌类型")
+    token_type: str = Field("bearer", title="令牌类型", description="令牌类型")
 
 
 router = APIRouter()
@@ -38,9 +38,11 @@ router = APIRouter()
             },
         },
         400: {
-            "description": "hCaptcha 验证失败",
+            "description": "reCAPTCHA 验证失败",
             "content": {
-                "application/json": {"example": {"detail": "Invalid hCaptcha response"}}
+                "application/json": {
+                    "example": {"detail": "Invalid reCAPTCHA response"}
+                }
             },
         },
         401: {
@@ -59,9 +61,9 @@ async def login(user: UserLogin):
 
     成功时返回访问令牌，失败时返回错误信息。
     """
-    if not await verify_hcaptcha(user.captcha_response):
+    if not await verify_recaptcha(user.captcha_response):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid hCaptcha response"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
         )
     db_user = await get_user_by_username(user.username)
     if db_user is None or not verify_password(user.password, db_user.hashed_password):
@@ -72,46 +74,46 @@ async def login(user: UserLogin):
 
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return Auth_Token(access_token=access_token, token_type="bearer")
 
 
-class hcapcha_sitekey(BaseModel):
-    hcaptcha_site_key: str
+class recapcha_sitekey(BaseModel):
+    recapcha_sitekey: str
 
 
-# 获取 Hcaptcha site-key
+# 获取 reCAPTCHA site-key
 @router.get(
-    "/hcaptcha-site-key",
-    summary="获取Hcaptcha site-key",
-    response_model=hcapcha_sitekey,
+    "/reCAPTCHA_site_key",
+    summary="reCAPTCHA site-key",
+    response_model=recapcha_sitekey,
     responses={
         200: {
-            "description": "成功获取 hCaptcha site-key",
+            "description": "成功获取 reCAPTCHA site-key",
             "content": {
                 "application/json": {
-                    "example": {"hcaptcha_site_key": "your_site_key_here"}
+                    "example": {"reCAPTCHA_site_key": "your_site_key_here"}
                 }
             },
         },
         400: {
-            "description": "hCaptcha site-key 未配置",
+            "description": "reCAPTCHA site-key 未配置",
             "content": {
                 "application/json": {
-                    "example": {"message": "hCaptcha site key not configured"}
+                    "example": {"message": "reCAPTCHA site key not configured"}
                 }
             },
         },
     },
 )
-def get_hcaptcha_site_key():
+def get_reCAPTCHA_site_key():
     """
-    获取 hCaptcha 的站点密钥（site-key）。
+    获取 reCAPTCHA 的站点密钥（site-key）。
 
-    如果 hCaptcha site-key 已配置，返回该 key。若未配置，则返回错误信息。
+    如果 reCAPTCHA site-key 已配置，返回该 key。若未配置，则返回错误信息。
     """
-    if site_key := settings.HCAPTCHA_SITE_KEY:
-        return {"hcaptcha_site_key": site_key}
+    if site_key := settings.RECAPTCHA_SITE_KEY:
+        return recapcha_sitekey(recapcha_sitekey=site_key)
     else:
         return JSONResponse(
-            status_code=400, content={"message": "hCaptcha site key not configured"}
+            status_code=400, content={"message": "reCAPTCHA site key not configured"}
         )
