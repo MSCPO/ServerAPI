@@ -76,7 +76,9 @@ async def login(user: UserLogin):
     await update_last_login(db_user)
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username})
-    return Auth_Token.model_validate({"access_token": access_token, "token_type": "bearer"})
+    return Auth_Token.model_validate(
+        {"access_token": access_token, "token_type": "bearer"}
+    )
 
 
 class recapcha_sitekey(BaseModel):
