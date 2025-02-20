@@ -9,6 +9,9 @@ class Motd(BaseModel):
     )
     ansi: str = Field(..., title="ANSI格式MOTD", description="显示ANSI格式的MOTD")
 
+    class Config:
+        from_attributes = True
+
 
 class GetServerStatusAPI(BaseModel):
     players: dict[str, int] = Field(
@@ -20,6 +23,9 @@ class GetServerStatusAPI(BaseModel):
     icon: None | str = Field(
         None, title="服务器图标", description="服务器的图标，若无则为None"
     )
+
+    class Config:
+        from_attributes = True
 
 
 class GetServer(BaseModel):
@@ -51,6 +57,9 @@ class GetServer(BaseModel):
         description="服务器是否处于隐藏状态，隐藏时部分信息不显示",
     )
 
+    class Config:
+        from_attributes = True
+
 
 class GetServerShowAPI(BaseModel):
     server_list: list[GetServer] = Field(
@@ -61,8 +70,14 @@ class GetServerShowAPI(BaseModel):
     )
     total: int = Field(..., title="服务器总数", description="当前所有服务器的总数")
 
+    class Config:
+        from_attributes = True
+
 
 class GetServerIdShowAPI(GetServer):
     status: GetServerStatusAPI | None = Field(
         ..., title="服务器状态", description="显示服务器的在线状态信息"
     )
+
+    class Config:
+        from_attributes = True

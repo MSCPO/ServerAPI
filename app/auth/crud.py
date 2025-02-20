@@ -1,9 +1,12 @@
+from datetime import datetime, timezone
+
 import httpx
 from passlib.context import CryptContext
 from tortoise.exceptions import DoesNotExist
 
-from app.auth.models import User
 from app.config import settings
+from app.log import logger
+from app.user.models import User
 
 # 密码加密和验证工具
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -34,4 +37,10 @@ async def verify_recaptcha(captcha_response: str) -> bool:
             },
         )
         result: dict = response.json()
+        logger.info(result)
         return result.get("success")
+
+
+async def update_last_login(user: User):
+    user.last_login = datetime.now(timezone.utc)
+    await user.save(update_fields=["last_login"])

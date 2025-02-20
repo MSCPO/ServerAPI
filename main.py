@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import disconnect, init_db
 from app.router.auth import router as auth_router
 from app.router.servers import router as serves_router
+from app.router.user import router as user_router
 from app.router.webhook import router as webhook_router
 from app.servers.GetServerStatus import query_servers_periodically
 
@@ -33,6 +34,7 @@ app.add_middleware(
 app.include_router(serves_router, prefix="/v1", tags=["servers"])
 app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
+app.include_router(user_router, prefix="/v1", tags=["user"])
 
 app.include_router
 if __name__ == "__main__":
