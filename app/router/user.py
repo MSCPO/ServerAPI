@@ -9,6 +9,7 @@ from app.user.schemas import User as UserSchema
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 @router.get(
     "/me",
     response_model=UserSchema,
