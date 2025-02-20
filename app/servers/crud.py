@@ -26,19 +26,7 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServe
 
     # 生成服务器列表
     server_list = [
-        GetServer(
-            id=server.id,
-            name=server.name,
-            ip=None if server.is_hide else server.ip,
-            type=server.type,
-            version=server.version,
-            desc=server.desc,
-            link=server.link,
-            is_member=server.is_member,
-            auth_mode=server.auth_mode,
-            tags=server.tags,
-            is_hide=server.is_hide,
-        )
+        GetServer.model_validate(server)
         for server in server_query
     ]
 
