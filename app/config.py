@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     HCAPTCHA_SITE_KEY: str
     HCAPTCHA_SECRET_KEY: str
+    SECRET: str
+    MIRROR_URL: str | None = None
 
     class Config:
         env_file = ".env"

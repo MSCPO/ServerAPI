@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.servers import router as serves_router
+from app.api.webhook import router as webhook_router
 from app.db import disconnect, init_db
 from app.getstatus.GetServerStatus import query_servers_periodically
 
@@ -31,6 +32,8 @@ app.add_middleware(
 
 app.include_router(serves_router, prefix="/servers/v1", tags=["servers"])
 app.include_router(auth_router, prefix="/auth/v1", tags=["auth"])
+app.include_router(webhook_router, tags=["webhook"])
 
+app.include_router
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=1)
