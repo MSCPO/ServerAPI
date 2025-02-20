@@ -4,6 +4,7 @@ import hmac
 import os
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from ..config import settings
 from ..log import logger
@@ -55,9 +56,32 @@ async def run_git_pull_and_restart():
         logger.error(f"Git pull error: {stderr.decode()}")
 
 
-@router.post("/webhook")
+class WebhookResponse(BaseModel):
+    message: str
+    status: str
+
+
+@router.post(
+    "/webhook",
+    summary="GitHub Webhook",
+    response_model=WebhookResponse,
+    tags=["webhook"],
+    responses={200: {"description": "Success"}},
+    include_in_schema=False,
+)
 async def handle_webhook(request: Request):
-    # 获取 POST 请求中的表单数据
+    """
+    接收并处理 GitHub Webhook 请求，执行 Git 拉取操作。
+
+    请求体的字段如下：
+    - `event`: 事件类型（如 `push` 或 `pull_request`）。
+    - `repository`: 触发事件的 Git 仓库名称。
+    - `commit_sha`: 最近提交的 SHA。
+
+    响应字段：
+    - `message`: 操作的结果信息。
+    - `status`: 操作状态（如成功或失败）。
+    """
     payload_bytes = await request.body()
     payload = await request.json()
 
