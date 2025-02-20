@@ -25,10 +25,7 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServe
         server_query = server_query[offset:]
 
     # 生成服务器列表
-    server_list = [
-        GetServer.model_validate(server)
-        for server in server_query
-    ]
+    server_list = [GetServer.model_validate(server) for server in server_query]
 
     # 返回数据
     return GetServerShowAPI(

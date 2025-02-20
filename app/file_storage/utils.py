@@ -4,6 +4,7 @@ from app.config import settings
 from app.file_storage.conn import s3_client
 from app.file_storage.models import File
 
+
 def get_file_extension(filename: str) -> str:
     last_dot_pos = filename.rfind(".")
 
