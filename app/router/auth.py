@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -19,6 +19,14 @@ class Auth_Token(BaseModel):
 
 
 router = APIRouter()
+
+
+async def get_real_client_ip(request: Request) -> str:
+    """
+    获取客户端真实的 IP 地址，如果存在反代理则从 X-Forwarded-For 中获取。
+    """
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    return forwarded_for.split(",")[0] if forwarded_for else request.client.host
 
 
 # 用户登录，获取 token
@@ -54,7 +62,7 @@ router = APIRouter()
         },
     },
 )
-async def login(user: UserLogin):
+async def login(user: UserLogin, request: Request):
     """
     用户登录，验证凭证并返回 JWT token。
 
@@ -73,7 +81,10 @@ async def login(user: UserLogin):
             detail="Invalid credentials",
         )
 
-    await update_last_login(db_user)
+    # 获取真实客户端 IP
+    client_ip = await get_real_client_ip(request)
+    await update_last_login(db_user, client_ip)
+
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username})
     return Auth_Token.model_validate(
