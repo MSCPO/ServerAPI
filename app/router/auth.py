@@ -73,7 +73,6 @@ async def login(user: UserLogin, request: Request):
             detail="Invalid credentials",
         )
 
-
     await update_last_login(db_user, request.client.host)
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username})
