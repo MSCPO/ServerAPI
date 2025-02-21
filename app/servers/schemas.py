@@ -31,31 +31,6 @@ class GetServerStatusAPI(BaseModel):
 class GetServer(BaseModel):
     id: int = Field(..., title="服务器ID", description="服务器的唯一标识符")
     name: str = Field(..., title="服务器名称", description="服务器的名称")
-    ip: None | str = Field(
-        None, title="服务器IP", description="服务器的IP地址，若隐藏则为None"
-    )
-    type: str = Field(
-        ...,
-        title="服务器类型",
-        description="服务器所属的类型（例如：Minecraft、World of Warcraft等）",
-    )
-    version: str = Field(..., title="服务器版本", description="服务器运行的版本")
-    desc: str = Field(..., title="服务器描述", description="对服务器的简短描述")
-    link: str = Field(..., title="服务器链接", description="指向服务器详情的链接")
-    is_member: bool = Field(
-        ..., title="是否为成员服务器", description="是否是成员专属服务器"
-    )
-    auth_mode: str = Field(..., title="认证模式", description="服务器使用的认证模式")
-    tags: list = Field(
-        ...,
-        title="服务器标签",
-        description="与服务器相关的标签（如：生存、创造、PVP等）",
-    )
-    is_hide: bool = Field(
-        ...,
-        title="是否隐藏",
-        description="服务器是否处于隐藏状态，隐藏时部分信息不显示",
-    )
 
     class Config:
         from_attributes = True
