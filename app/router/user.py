@@ -67,7 +67,6 @@ async def get_me(request: Request):
 
     # 提取 token 字符串
     token = authorization[7:]
-    logger.info(f"Token: {token}")
 
     user = get_current_user(token)
 
