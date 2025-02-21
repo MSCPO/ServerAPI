@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -54,7 +54,7 @@ router = APIRouter()
         },
     },
 )
-async def login(user: UserLogin):
+async def login(user: UserLogin, request: Request):
     """
     用户登录，验证凭证并返回 JWT token。
 
@@ -73,7 +73,8 @@ async def login(user: UserLogin):
             detail="Invalid credentials",
         )
 
-    await update_last_login(db_user)
+
+    await update_last_login(db_user, request.client.host)
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username})
     return Auth_Token.model_validate(

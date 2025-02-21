@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import httpx
 from passlib.context import CryptContext
@@ -41,6 +42,9 @@ async def verify_recaptcha(captcha_response: str) -> bool:
         return result.get("success")
 
 
-async def update_last_login(user: User):
-    user.last_login = datetime.now(timezone.utc)
-    await user.save(update_fields=["last_login"])
+async def update_last_login(user: User, ip: str):
+    # 获取上海时区的当前时间
+    user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
+    user.last_login_ip = ip
+    # 保存用户数据
+    await user.save(update_fields=["last_login", "last_login_ip"])

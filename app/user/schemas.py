@@ -47,6 +47,9 @@ class User(UserBase):
     id: int = Field(..., description="用户的唯一标识符")
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
+    last_login_ip: str | None = Field(
+        None, max_length=15, description="用户最后登录IP地址"
+    )
 
     class Config:
         from_attributes = True
