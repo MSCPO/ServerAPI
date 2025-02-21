@@ -18,8 +18,8 @@ router = APIRouter()
                 "application/json": {
                     "example": {
                         "servers": [
-                            {"id": 1, "name": "Server 1", "status": "active"},
-                            {"id": 2, "name": "Server 2", "status": "inactive"},
+                            {"id": 1, "name": "Server 1"},
+                            {"id": 2, "name": "Server 2"},
                         ]
                     }
                 }
@@ -59,10 +59,29 @@ async def list_servers(
             "content": {
                 "application/json": {
                     "example": {
-                        "id": 1,
-                        "name": "Server 1",
-                        "status": "active",
-                        "location": "US-East",
+                        "id": 2,
+                        "name": "服务器名称",
+                        "ip": "example.com:37581",
+                        "type": "BEDROCK",
+                        "version": "1.21",
+                        "desc": "描述内容",
+                        "link": "https://example.com",
+                        "is_member": True,
+                        "auth_mode": "OFFICIAL",
+                        "tags": ["生存", "建筑", "原汁原味"],
+                        "is_hide": False,
+                        "status": {
+                            "players": {"online": 0, "max": 15},
+                            "delay": 59.96639499971934,
+                            "version": "1.21.60",
+                            "motd": {
+                                "plain": "服务器名称2",
+                                "html": "<p>服务器名称2</p>",
+                                "minecraft": "服务器名称2",
+                                "ansi": "\u001b[0m服务器名称2\u001b[0m",
+                            },
+                            "icon": None,
+                        },
                     }
                 }
             },

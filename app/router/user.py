@@ -19,10 +19,16 @@ router = APIRouter()
             "content": {
                 "application/json": {
                     "example": {
-                        "username": "john_doe",
-                        "email": "john.doe@example.com",
-                        "full_name": "John Doe",
-                        "is_active": True,
+                        "username": "test",
+                        "email": "test@example.com",
+                        "display_name": None,
+                        "avatar_url": "https://www.gravatar.com/avatar/098f6bcd4621d373cade4e832627b4f6?s=100x100&d=retro",
+                        "role": "user",
+                        "is_active": False,
+                        "id": 1,
+                        "created_at": "2025-02-20T11:36:45.530878+08:00",
+                        "last_login": "2025-02-22T00:15:56.934187+08:00",
+                        "last_login_ip": "xxx.xxx.xxx.xxx",
                     }
                 }
             },
