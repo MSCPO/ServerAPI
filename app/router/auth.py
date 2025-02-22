@@ -1,16 +1,18 @@
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.auth.auth import create_access_token
-from app.auth.crud import (
-    get_user_by_username,
+from app.config import settings
+from app.services.auth.auth import create_access_token
+from app.services.auth.crud import (
     update_last_login,
     verify_password,
     verify_recaptcha,
 )
-from app.auth.schemas import UserLogin
-from app.config import settings
+from app.services.auth.schemas import RegisterRequest, UserLogin
+from app.services.conn.redis import redis_client
+from app.services.user.models import User
+from app.services.utils import generate_token, send_verification_email
 
 
 class Auth_Token(BaseModel):
@@ -74,7 +76,7 @@ async def login(user: UserLogin, request: Request):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
         )
-    db_user = await get_user_by_username(user.username)
+    db_user = await User.get_or_none(user.username)
     if db_user is None or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,7 +95,47 @@ async def login(user: UserLogin, request: Request):
 
 
 class recapcha_sitekey(BaseModel):
-    recapcha_sitekey: str
+    recapcha_sitekey: str = Field(
+        ..., title="reCAPTCHA 站点密钥", description="reCAPTCHA 站点密钥"
+    )
+
+
+class RegisterResponse(BaseModel):
+    message: str = Field(..., title="消息", description="注册成功消息")
+
+
+@router.post(
+    "/register",
+    response_model=RegisterResponse,
+    summary="用户注册",
+    responses={
+        200: {
+            "description": "注册成功，返回注册成功消息",
+            "content": {
+                "application/json": {
+                    "example": {"message": "验证邮件已发送，请查收您的邮箱"}
+                }
+            },
+        },
+        400: {
+            "description": "reCAPTCHA 验证失败",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid reCAPTCHA response"}
+                }
+            },
+        },
+    },
+)
+async def register(request: RegisterRequest, background_tasks: BackgroundTasks):
+    if not await verify_recaptcha(request.captcha_response):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
+        )
+    token = generate_token()
+    redis_client.setex(f"verify:{token}", 900, request.email)
+    background_tasks.add_task(send_verification_email, request.email, token)
+    return {"message": "验证邮件已发送，请查收您的邮箱"}
 
 
 # 获取 reCAPTCHA site-key
