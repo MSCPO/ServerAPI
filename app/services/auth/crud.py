@@ -3,24 +3,15 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from passlib.context import CryptContext
-from tortoise.exceptions import DoesNotExist
 
 from app.config import settings
 from app.log import logger
-from app.user.models import User
+from app.services.user.models import User
 
 # 密码加密和验证工具
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 RECAPTCHA_VERIFY_URL = "https://recaptcha.net/recaptcha/api/siteverify"
-
-
-# 获取用户信息
-async def get_user_by_username(username: str):
-    try:
-        return await User.get(username=username)
-    except DoesNotExist:
-        return None
 
 
 # 验证密码

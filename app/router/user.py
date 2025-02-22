@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException, Request, status
 
-from app.log import logger
-from app.user.crud import get_current_user
-from app.user.models import User
-from app.user.schemas import User as UserSchema
+from app.services.user.crud import get_current_user
+from app.services.user.models import User
+from app.services.user.schemas import User as UserSchema
 
 router = APIRouter()
 
