@@ -1,14 +1,15 @@
+import random
 import re
 import smtplib
 import string
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from random import random
 from zoneinfo import ZoneInfo
 
-from app.config import settings
 from jinja2 import Template
+
+from app.config import settings
 from app.log import logger
 
 
