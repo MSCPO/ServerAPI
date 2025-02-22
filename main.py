@@ -5,12 +5,12 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.db import disconnect, init_db
 from app.router.auth import router as auth_router
 from app.router.servers import router as serves_router
 from app.router.user import router as user_router
 from app.router.webhook import router as webhook_router
-from app.servers.GetServerStatus import query_servers_periodically
+from app.services.conn.db import disconnect, init_db
+from app.services.servers.GetServerStatus import query_servers_periodically
 
 
 @asynccontextmanager

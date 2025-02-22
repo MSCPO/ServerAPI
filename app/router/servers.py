@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.servers.crud import GetServer_by_id, GetServers
-from app.servers.schemas import GetServerIdShowAPI, GetServerShowAPI
+from app.services.servers.crud import GetServer_by_id, GetServers
+from app.services.servers.schemas import GetServerIdShowAPI, GetServerShowAPI
 
 router = APIRouter()
 

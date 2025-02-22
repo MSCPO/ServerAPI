@@ -1,8 +1,8 @@
-from app.servers.models import (
+from app.services.servers.models import (
     Server,
     ServerStatus,
 )
-from app.servers.schemas import (
+from app.services.servers.schemas import (
     GetServer,
     GetServerIdShowAPI,
     GetServerShowAPI,
