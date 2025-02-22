@@ -17,6 +17,7 @@ class UserRegister(UserLogin):
         None, title="头像URL", description="用户的头像URL，可选"
     )
 
+
 class RegisterRequest(BaseModel):
     email: str = Field(..., title="邮箱", description="用户的邮箱地址")
     captcha_response: str = Field(
