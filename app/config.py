@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET: str
+    FROM_EMAIL: str
+    FROM_EMAIL_PASSWORD: str
+    SMTP_SERVER: str
+    SMTP_PORT: int
 
     class Config:
         env_file = ".env"

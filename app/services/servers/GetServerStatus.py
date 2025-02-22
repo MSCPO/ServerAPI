@@ -1,8 +1,8 @@
 import asyncio
 
 from app import logger
-from app.servers.crud import Server, ServerStatus
-from app.servers.MineStatus import get_server_stats
+from app.services.servers.crud import Server, ServerStatus
+from app.services.servers.MineStatus import get_server_stats
 
 
 async def query_servers_periodically():
