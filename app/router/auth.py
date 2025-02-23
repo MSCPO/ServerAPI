@@ -1,6 +1,5 @@
 import uuid
 from PIL import Image
-import io
 import ujson as json
 from fastapi import (
     APIRouter,
@@ -400,3 +399,39 @@ def get_reCAPTCHA_site_key():
         return JSONResponse(
             status_code=400, content={"detail": "reCAPTCHA site key not configured"}
         )
+
+
+# 注销
+@router.post(
+    "/logout",
+    summary="注销",
+    description="注销当前用户，使 JWT token 失效",
+    responses={
+        200: {
+            "description": "注销成功",
+            "content": {"application/json": {"example": {"detail": "注销成功"}}},
+        },
+        401: {
+            "description": "未授权，缺少或无效的 Bearer token",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Authorization token missing or invalid"}
+                }
+            },
+        },
+    },
+)
+async def logout(request: Request):
+    """
+    注销当前用户，使 JWT token 失效
+    """
+    # 使用redis黑名单
+    token = request.headers.get("Authorization")
+    if token is None or not token.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization token missing or invalid",
+        )
+    token = token.split(" ")[1]
+    await redis_client.setex(f"token:invalid:{token}", 86400, "invalid")
+    return {"detail": "注销成功"}

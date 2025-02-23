@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 import jwt
 
 from app.config import settings
+from app.services.conn.redis import redis_client
 
 
 def create_access_token(data: dict, expires_delta: None | timedelta = None):
@@ -19,6 +20,8 @@ def create_access_token(data: dict, expires_delta: None | timedelta = None):
 
 
 def verify_token(token: str):
+    if redis_client.get(f"token:invalid:{token}"):
+        return None
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except jwt.PyJWTError:
