@@ -1,3 +1,4 @@
+import ujson as json
 import uuid
 
 from fastapi import (
@@ -179,7 +180,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
         token = generate_token()
 
     redis_client.setex(
-        f"verify:{token}", 900, {"email": request.email, "verified": False}
+        f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
     )
     background_tasks.add_task(send_verification_email, request.email, token)
     return {"message": "验证邮件已发送，请查收您的邮箱", "success": True}
@@ -211,7 +212,9 @@ async def verify(token: str):
         raise HTTPException(status_code=404, detail="Token not found")
 
     redis_client.setex(
-        f"verify:{token}", 86400, {"email": verify_data["email"], "verified": True}
+        f"verify:{token}",
+        86400,
+        json.dumps({"email": verify_data["email"], "verified": True}),
     )
 
     return {"message": "验证成功", "success": True}
@@ -283,7 +286,7 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         )
 
     # 验证Token
-    verify_data = redis_client.get(f"verify:{request.token}")
+    verify_data = json.loads(redis_client.get(f"verify:{request.token}"))
     if verify_data is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
