@@ -1,3 +1,5 @@
+"""工具函数模块"""
+
 import random
 import re
 import smtplib
@@ -8,12 +10,13 @@ from email.mime.text import MIMEText
 from zoneinfo import ZoneInfo
 
 from jinja2 import Template
+from passlib.context import CryptContext
 
 from app.config import settings
 from app.log import logger
 
 
-def validate_password(password: str) -> str:
+def validate_password(password: str) -> bool:
     """
     密码规则认证
     """
@@ -27,20 +30,26 @@ def validate_password(password: str) -> str:
     return type_count >= 2
 
 
+def validate_email(email: str) -> bool:
+    """邮箱格式认证"""
+    return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
+
+
 def generate_token() -> str:
+    """生成 32 位随机字符串"""
     return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
 
 def render_html_template(template_path, **kwargs):
+    """渲染 HTML 模板"""
     with open(template_path, encoding="utf-8") as file:
         template_content = file.read()
     template = Template(template_content)
     return template.render(**kwargs)
 
 
-# 发送验证邮件
 def send_verification_email(to_email: str, token: str):
-    # 使用 settings 中的配置
+    """发送验证邮件"""
     from_email = settings.FROM_EMAIL
     password = settings.FROM_EMAIL_PASSWORD
 
@@ -63,8 +72,26 @@ def send_verification_email(to_email: str, token: str):
 
 
 def _send_mail(from_email: str, password: str, msg: MIMEMultipart, to_email: str):
+    """发送邮件"""
     server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT)
     server.login(from_email, password)
     text = msg.as_string()
     server.sendmail(from_email, to_email, text)
     server.quit()
+
+
+def validate_username(username: str) -> bool:
+    """用户名认证(4-16 位中文、字毮、数字、下划线、减号)"""
+    return bool(re.match(r"[\u4e00-\u9fa5\w-]{4,16}", username))
+
+PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """密码验证"""
+    return PWD_CONTEXT.verify(plain_password, hashed_password)
+
+
+def hash_password(password: str) -> str:
+    """密码加密"""
+    return PWD_CONTEXT.hash(password)

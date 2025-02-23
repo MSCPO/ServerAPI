@@ -19,7 +19,6 @@ class UserBase(BaseModel):
     username: str = Field(..., max_length=32, description="用户的用户名")
     email: str = Field(..., max_length=100, description="用户的电子邮箱")
     display_name: str = Field(max_length=16, description="用户的显示名称")
-    avatar_url: str | None = Field(None, max_length=255, description="用户的头像URL")
     role: RoleEnum = Field(RoleEnum.user, description="用户角色")
     is_active: bool = Field(False, description="用户是否激活")
 
@@ -28,14 +27,12 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    hashed_password: str = Field(..., max_length=60, description="用户的加密密码")
-
-    class Config:
-        from_attributes = True
+    password: str = Field(..., max_length=60, description="用户的加密密码")
+    token: str = Field(..., description="用户的注册验证码")
 
 
 class UserUpdate(UserBase):
-    hashed_password: str | None = Field(
+    password: str | None = Field(
         None, max_length=60, description="用户的新密码，若更新则提供"
     )
 

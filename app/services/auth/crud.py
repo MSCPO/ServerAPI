@@ -2,21 +2,13 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import httpx
-from passlib.context import CryptContext
 
 from app.config import settings
 from app.log import logger
 from app.services.user.models import User
 
-# 密码加密和验证工具
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 RECAPTCHA_VERIFY_URL = "https://recaptcha.net/recaptcha/api/siteverify"
-
-
-# 验证密码
-def verify_password(plain_password: str, hashed_password: str):
-    return pwd_context.verify(plain_password, hashed_password)
 
 
 async def verify_recaptcha(captcha_response: str) -> bool:

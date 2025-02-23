@@ -1,18 +1,35 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
+import uuid
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.config import settings
+from app.file_storage.utils import upload_file_to_s3
 from app.services.auth.auth import create_access_token
 from app.services.auth.crud import (
     update_last_login,
-    verify_password,
     verify_recaptcha,
 )
 from app.services.auth.schemas import RegisterRequest, UserLogin
 from app.services.conn.redis import redis_client
 from app.services.user.models import User
-from app.services.utils import generate_token, send_verification_email
+from app.services.utils import (
+    generate_token,
+    hash_password,
+    send_verification_email,
+    validate_password,
+    validate_username,
+    verify_password,
+)
 
 
 class Auth_Token(BaseModel):
@@ -35,7 +52,7 @@ async def get_real_client_ip(request: Request) -> str:
 @router.post(
     "/login",
     response_model=Auth_Token,
-    summary="token 获取",
+    summary="Token 获取",
     responses={
         200: {
             "description": "成功登录，返回 JWT token",
@@ -100,20 +117,28 @@ class recapcha_sitekey(BaseModel):
     )
 
 
-class RegisterResponse(BaseModel):
-    message: str = Field(..., title="消息", description="注册成功消息")
+class ReturnResponse(BaseModel):
+    success: bool = Field(True, title="成功", description="是否成功")
+    message: str = Field(..., title="消息", description="状态返回消息")
+
+
+class ReturnResponse_Register(ReturnResponse):
+    user_id: int = Field(..., title="用户ID", description="用户ID")
 
 
 @router.post(
-    "/register",
-    response_model=RegisterResponse,
+    "/verifyemail",
+    response_model=ReturnResponse,
     summary="用户注册",
     responses={
         200: {
-            "description": "注册成功，返回注册成功消息",
+            "description": "通过验证，发送验证邮箱",
             "content": {
                 "application/json": {
-                    "example": {"message": "验证邮件已发送，请查收您的邮箱"}
+                    "example": {
+                        "message": "验证邮件已发送，请查收您的邮箱",
+                        "success": True,
+                    }
                 }
             },
         },
@@ -125,20 +150,205 @@ class RegisterResponse(BaseModel):
                 }
             },
         },
+        409: {
+            "description": "邮箱已存在",
+            "content": {
+                "application/json": {"example": {"detail": "Email already exists"}}
+            },
+        },
     },
 )
-async def register(request: RegisterRequest, background_tasks: BackgroundTasks):
+async def verifyemail(request: RegisterRequest, background_tasks: BackgroundTasks):
     if not await verify_recaptcha(request.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
         )
+    if await User.get_or_none(email=request.email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
+        )
+
     token = generate_token()
-    redis_client.setex(f"verify:{token}", 900, request.email)
+    # 检擦token是否有重复
+    while redis_client.get(f"verify:{token}"):
+        token = generate_token()
+
+    redis_client.setex(
+        f"verify:{token}", 900, {"email": request.email, "verified": False}
+    )
     background_tasks.add_task(send_verification_email, request.email, token)
-    return {"message": "验证邮件已发送，请查收您的邮箱"}
+    return {"message": "验证邮件已发送，请查收您的邮箱", "success": True}
 
 
-# 获取 reCAPTCHA site-key
+@router.post(
+    "/verify/{token}",
+    summary="用户注册验证",
+    response_model=ReturnResponse,
+    responses={
+        200: {
+            "description": "验证成功",
+            "content": {
+                "application/json": {
+                    "example": {"message": "验证成功", "success": True}
+                }
+            },
+        },
+        404: {
+            "description": "Token 未找到",
+            "content": {"application/json": {"example": {"detail": "Token not found"}}},
+        },
+    },
+)
+async def verify(token: str):
+    verify_data = redis_client.get(f"verify:{token}")
+    if verify_data is None:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    redis_client.setex(
+        f"verify:{token}", 86400, {"email": verify_data["email"], "verified": True}
+    )
+
+    return {"message": "验证成功", "success": True}
+
+
+# 注册请求体
+class RegisterRequest(BaseModel):
+    password: str = Field(
+        ...,
+        title="密码",
+        description="用户的密码，长度为 8-16 位，至少包含数字、大写字毸、小写字母和特殊字符中的两种",
+    )
+    display_name: str = Field(
+        None,
+        title="显示名称",
+        description="用户的显示名称，长度不超过 16 位",
+    )
+    token: str = Field(
+        ...,
+        title="Token",
+        description="用户的注册token",
+    )
+    captcha_response: str = Field(
+        ...,
+        title="reCAPTCHA 响应",
+        description="reCAPTCHA 响应",
+    )
+
+
+@router.post(
+    "/register",
+    response_model=ReturnResponse_Register,
+    summary="用户注册",
+    responses={
+        200: {
+            "description": "用户注册成功",
+            "content": {
+                "application/json": {
+                    "example": {"message": "用户注册成功", "user_id": 123}
+                }
+            },
+        },
+        400: {
+            "description": "请求参数错误（如密码无效或显示名称已存在）",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "密码无效": {
+                            "detail": "密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符"
+                        },
+                        "显示名称无效": {"detail": "显示名称无效"},
+                        "显示名称已存在": {"detail": "显示名称已存在"},
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "reCAPTCHA 验证失败",
+            "content": {
+                "application/json": {"example": {"detail": "无效的reCAPTCHA响应"}}
+            },
+        },
+        404: {
+            "description": "Token 未找到或已过期",
+            "content": {
+                "application/json": {"example": {"detail": "Token 未找到或已过期"}}
+            },
+        },
+        409: {
+            "description": "Token 已被验证",
+            "content": {"application/json": {"example": {"detail": "未被验证"}}},
+        },
+        500: {
+            "description": "服务器内部错误",
+            "content": {"application/json": {"example": {"detail": "头像上传失败"}}},
+        },
+    },
+)
+async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
+    # 验证reCAPTCHA
+    if not await verify_recaptcha(request.captcha_response):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="无效的reCAPTCHA响应",
+        )
+
+    # 验证密码强度
+    if not validate_password(request.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符",
+        )
+
+    # 验证Token
+    verify_data = redis_client.get(f"verify:{request.token}")
+    if verify_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
+        )
+    if not verify_data["verified"]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Token 未被验证"
+        )
+
+    # 验证用户名是否唯一
+    if validate_username(request.display_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称无效"
+        )
+    if await User.get_or_none(display_name=request.display_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称已存在"
+        )
+
+    try:
+        avatar_url = await upload_file_to_s3(avatar.file, avatar.filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="头像上传失败"
+        ) from e
+
+    # 生成唯一用户名
+    username = f"mscpo_{uuid.uuid4().hex[:8]}"
+    while await User.get_or_none(username=username):
+        username = f"mscpo_{uuid.uuid4().hex[:8]}"
+
+    try:
+        user = await User.create(
+            username=username,
+            email=verify_data["email"],
+            display_name=request.display_name,
+            hashed_password=hash_password(request.password),
+            avatar_url=avatar_url,
+            is_active=True,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建用户失败"
+        ) from e
+
+    return {"message": "用户注册成功", "user_id": user.id}
+
+
 @router.get(
     "/reCAPTCHA_site_key",
     summary="reCAPTCHA site-key",
