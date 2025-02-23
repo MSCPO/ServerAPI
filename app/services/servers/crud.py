@@ -1,3 +1,5 @@
+from fastapi import HTTPException, status
+
 from app.services.servers.models import (
     Server,
     ServerStatus,
@@ -12,7 +14,7 @@ from app.services.servers.schemas import (
 from app.services.user.models import UserServer
 
 
-async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServer]:
+async def GetServers(limit: int | None = None, offset: int = 0) -> GetServerShowAPI:
     server_query = await Server.all()
 
     # 计算总数
@@ -34,17 +36,58 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServe
     )
 
 
-async def GetServer_by_id(server_id: int, current_user: dict) -> None | GetServer:
-    UserServer_query = await UserServer.filter(
-        user=current_user["id"], server=server_id
-    ).exists()
+async def GetServer_by_id(server_id: int) -> None | GetServerIdShowAPI:
     server = await Server.get_or_none(id=server_id)
     server_status = await ServerStatus.get_or_none(server=server)
     if server:
         return GetServerIdShowAPI(
             id=server.id,
             name=server.name,
-            ip=None if server.is_hide and UserServer_query else server.ip,
+            ip=None if server.is_hide else server.ip,
+            type=server.type,
+            version=server.version,
+            desc=server.desc,
+            link=server.link,
+            is_member=server.is_member,
+            auth_mode=server.auth_mode,
+            tags=server.tags,
+            is_hide=server.is_hide,
+            status=GetServerStatusAPI(
+                players=server_status.stat_data["players"],
+                delay=server_status.stat_data["delay"],
+                version=server_status.stat_data["version"],
+                motd=Motd(
+                    plain=server_status.stat_data["motd"]["plain"],
+                    html=server_status.stat_data["motd"]["html"],
+                    minecraft=server_status.stat_data["motd"]["minecraft"],
+                    ansi=server_status.stat_data["motd"]["ansi"],
+                ),
+                icon=server_status.stat_data["icon"],
+            )
+            if server_status and server_status.stat_data
+            else None,
+        )
+    return None
+
+
+async def GetServer_by_id_editor(
+    server_id: int, current_user: dict
+) -> GetServerIdShowAPI | None:
+    """查看服务器详细信息（详细信息）"""
+    is_role = await UserServer.filter(
+        user=current_user["id"], server=server_id
+    ).exists()
+    if not is_role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
+        )
+    server = await Server.get_or_none(id=server_id)
+    server_status = await ServerStatus.get_or_none(server=server)
+    if server:
+        return GetServerIdShowAPI(
+            id=server.id,
+            name=server.name,
+            ip=server.ip,
             type=server.type,
             version=server.version,
             desc=server.desc,

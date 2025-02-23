@@ -7,4 +7,3 @@ session = Session(
     aws_secret_access_key=settings.S3_SECRET_KEY,
 )
 
-s3_client = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)

@@ -41,11 +41,13 @@ class Auth_Token(BaseModel):
 router = APIRouter()
 
 
-async def get_real_client_ip(request: Request) -> str:
+async def get_real_client_ip(request: Request) -> str | None:
     """
     获取客户端真实的 IP 地址，如果存在反代理则从 X-Forwarded-For 中获取。
     """
     forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for is None or request.client is None:
+        return None
     return forwarded_for.split(",")[0] if forwarded_for else request.client.host
 
 
@@ -94,7 +96,7 @@ async def login(user: UserLogin, request: Request):
     if "@" in user.username_or_email:
         db_user = await User.get_or_none(email=user.username_or_email)
     else:
-        db_user = await User.get_or_none(username=user.username)
+        db_user = await User.get_or_none(username=user.username_or_email)
     if db_user is None or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -103,7 +105,8 @@ async def login(user: UserLogin, request: Request):
 
     # 获取真实客户端 IP
     client_ip = await get_real_client_ip(request)
-    await update_last_login(db_user, client_ip)
+    if client_ip is not None:
+        await update_last_login(db_user, client_ip)
 
     # 创建并返回 JWT token
     access_token = create_access_token(data={"sub": db_user.username, "id": db_user.id})
@@ -207,17 +210,23 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     },
 )
 async def verify(token: str):
-    verify_data = redis_client.get(f"verify:{token}")
-    if verify_data is None:
-        raise HTTPException(status_code=404, detail="Token not found")
-
+    decode_data = await get_token_data(token)
     redis_client.setex(
         f"verify:{token}",
         86400,
-        json.dumps({"email": verify_data["email"], "verified": True}),
+        json.dumps({"email": decode_data["email"], "verified": True}),
     )
 
     return {"message": "验证成功", "success": True}
+
+
+async def get_token_data(token) -> dict[str, str]:
+    verify_data: bytes = await redis_client.get(f"verify:{token}")
+    if verify_data is None:
+        raise HTTPException(status_code=404, detail="Token not found")
+    if verify_data:
+        decode_data: dict = json.loads(verify_data.decode())
+    return decode_data
 
 
 @router.post(
@@ -244,6 +253,7 @@ async def verify(token: str):
                         },
                         "显示名称无效": {"detail": "显示名称无效"},
                         "显示名称已存在": {"detail": "显示名称已存在"},
+                        "头像文件名无效": {"detail": "头像文件名无效"},
                     }
                 }
             },
@@ -286,7 +296,7 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         )
 
     # 验证Token
-    verify_data = json.loads(redis_client.get(f"verify:{request.token}"))
+    verify_data = await get_token_data(request.token)
     if verify_data is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
@@ -306,8 +316,12 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
             status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称已存在"
         )
 
+    if not isinstance(avatar.filename, str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件名无效"
+        )
     try:
-        avatar_url = await upload_file_to_s3(avatar.file, avatar.filename)
+        avatar_url = await upload_file_to_s3(await avatar.read(), avatar.filename)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="头像上传失败"

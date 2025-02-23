@@ -55,7 +55,7 @@ async def get_me(request: Request):
     获取当前登录用户的详细信息
     """
     # 从请求头获取 Bearer token
-    authorization: str = request.headers.get("Authorization")
+    authorization: str | None = request.headers.get("Authorization")
 
     if authorization is None or not authorization.startswith("Bearer "):
         raise HTTPException(

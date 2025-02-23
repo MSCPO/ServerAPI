@@ -111,14 +111,11 @@ async def handle_webhook(request: Request):
     if not hmac.compare_digest(computed_sha1, signature_sha1):
         raise HTTPException(status_code=400, detail="Invalid SHA1 signature")
 
-    logger.info(
-        f"ref: {payload.get('ref')} event: {request.headers.get('X-GitHub-Event').lower()}"
-    )
+    if not isinstance((event := request.headers.get("X-GitHub-Event")), str):
+        raise HTTPException(status_code=400, detail="Invalid event type")
+    logger.info(f"ref: {payload.get('ref')} event: {event.lower()}")
 
-    if (
-        payload.get("ref") == "refs/heads/main"
-        and request.headers.get("X-GitHub-Event").lower() == "push"
-    ):
+    if payload.get("ref") == "refs/heads/main" and event.lower() == "push":
         await run_git_pull_and_restart()
 
     return {"status": "success"}

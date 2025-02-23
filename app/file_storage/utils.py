@@ -1,8 +1,8 @@
 import uuid
 
 from app.config import settings
-from app.file_storage.conn import s3_client
 from app.file_storage.models import File
+from app.file_storage.conn import session
 
 
 def get_file_extension(filename: str) -> str:
@@ -19,7 +19,7 @@ def get_file_extension(filename: str) -> str:
     return last_extension
 
 
-async def upload_file_to_s3(file_content: bytes, file_name: str) -> str:
+async def upload_file_to_s3(file_content: bytes, file_name: str) -> tuple[str, str]:
     s3_object_name = f"uploads/{uuid.uuid4()!s}{get_file_extension(file_name)}"
 
     file = await File.get_or_none(
@@ -31,10 +31,9 @@ async def upload_file_to_s3(file_content: bytes, file_name: str) -> str:
             file.hash_value,
         )
 
-    async with s3_client as s3:
-        await s3.upload_fileobj(
-            Bucket=settings.S3_BUCKET, Key=s3_object_name, Body=file_content
-        )
+    async with session.resource("s3", endpoint_url=settings.S3_ENDPOINT_URL) as s3:
+        bucket = await s3.Bucket(settings.S3_BUCKET)
+        await bucket.put_object(Key=s3_object_name, Body=file_content)
 
     file_hash = File.generate_file_hash(file_content)
     await File.create(

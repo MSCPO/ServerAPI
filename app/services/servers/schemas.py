@@ -17,7 +17,7 @@ class GetServerStatusAPI(BaseModel):
     players: dict[str, int] = Field(
         ..., title="在线玩家数量", description="当前在线的玩家数量"
     )
-    delay: float = Field(None, title="延迟", description="服务器的延迟时间")
+    delay: float = Field(..., title="延迟", description="服务器的延迟时间")
     version: str = Field(..., title="版本", description="服务器的软件版本")
     motd: Motd = Field(..., title="MOTD", description="服务器的MOTD信息")
     icon: None | str = Field(
