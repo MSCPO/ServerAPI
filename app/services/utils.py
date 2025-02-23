@@ -86,7 +86,7 @@ async def send_verification_email(to_email: str, token: str):
         token=token,
         fullyear=datetime.now(ZoneInfo("Asia/Shanghai")).year,
         sentence=sentence,
-        author=author,
+        sentence_from=author,
         from_who=from_who,
     )
     msg.attach(MIMEText(body, "html", "utf-8"))

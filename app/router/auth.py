@@ -1,5 +1,6 @@
 import uuid
-
+from PIL import Image
+import io
 import ujson as json
 from fastapi import (
     APIRouter,
@@ -240,6 +241,12 @@ async def verify(token: str):
                         "显示名称无效": {"detail": "显示名称无效"},
                         "显示名称已存在": {"detail": "显示名称已存在"},
                         "头像文件名无效": {"detail": "头像文件名无效"},
+                        "头像必须为JPG或PNG格式": {"detail": "头像必须为JPG或PNG格式"},
+                        "头像文件大小不能超过15MB": {
+                            "detail": "头像文件大小不能超过15MB"
+                        },
+                        "头像必须是正方形": {"detail": "头像必须是正方形"},
+                        "头像文件无效": {"detail": "头像文件无效"},
                     }
                 }
             },
@@ -306,6 +313,29 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件名无效"
         )
+
+    if not avatar.filename.lower().endswith(("jpg", "jpeg", "png")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须为JPG或PNG格式"
+        )
+    if len(await avatar.read()) > 15 * 1024 * 1024:  # 15MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件大小不能超过15MB"
+        )
+
+    try:
+        await avatar.seek(0)
+        image = Image.open(await avatar.read())
+        width, height = image.size
+        if width != height:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须是正方形"
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件无效"
+        ) from e
+
     try:
         avatar_url = await upload_file_to_s3(await avatar.read(), avatar.filename)
     except Exception as e:
