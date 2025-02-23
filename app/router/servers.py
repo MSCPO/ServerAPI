@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.services.servers.crud import GetServer_by_id, GetServers
 from app.services.servers.schemas import GetServerIdShowAPI, GetServerShowAPI
+from app.services.user.crud import get_current_user
 
 router = APIRouter()
 
@@ -92,7 +93,9 @@ async def list_servers(
         },
     },
 )
-async def get_server(server_id: int):
+async def get_server(
+    server_id: int, current_user: dict | None = Depends(get_current_user)
+):
     """
     获取指定ID服务器的详细信息。
 
@@ -100,7 +103,7 @@ async def get_server(server_id: int):
 
     返回指定服务器的详细信息，如无法找到该服务器，则返回404。
     """
-    server = await GetServer_by_id(server_id)
+    server = await GetServer_by_id(server_id, current_user)
     if server is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"

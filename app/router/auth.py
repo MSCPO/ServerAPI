@@ -1,6 +1,6 @@
-import ujson as json
 import uuid
 
+import ujson as json
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -106,7 +106,7 @@ async def login(user: UserLogin, request: Request):
     await update_last_login(db_user, client_ip)
 
     # 创建并返回 JWT token
-    access_token = create_access_token(data={"sub": db_user.username})
+    access_token = create_access_token(data={"sub": db_user.username, "id": db_user.id})
     return Auth_Token.model_validate(
         {"access_token": access_token, "token_type": "bearer"}
     )

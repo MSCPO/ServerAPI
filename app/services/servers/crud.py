@@ -9,6 +9,7 @@ from app.services.servers.schemas import (
     GetServerStatusAPI,
     Motd,
 )
+from app.services.user.models import UserServer
 
 
 async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServer]:
@@ -33,14 +34,17 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> list[GetServe
     )
 
 
-async def GetServer_by_id(server_id: int) -> None | GetServer:
+async def GetServer_by_id(server_id: int, current_user: dict) -> None | GetServer:
+    UserServer_query = await UserServer.filter(
+        user=current_user["id"], server=server_id
+    ).exists()
     server = await Server.get_or_none(id=server_id)
     server_status = await ServerStatus.get_or_none(server=server)
     if server:
         return GetServerIdShowAPI(
             id=server.id,
             name=server.name,
-            ip=None if server.is_hide else server.ip,
+            ip=None if server.is_hide and UserServer_query else server.ip,
             type=server.type,
             version=server.version,
             desc=server.desc,

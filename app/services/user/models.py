@@ -47,3 +47,14 @@ class User(Model):
 
     class Meta:
         table = "users"
+
+
+class UserServer(Model):
+    user = fields.ForeignKeyField("default.User", on_delete=fields.CASCADE)
+    server = fields.ForeignKeyField("default.Server", on_delete=fields.CASCADE)
+    role = fields.CharField(
+        max_length=50, choices=[("owner", "Owner"), ("admin", "Admin")]
+    )
+
+    class Meta:
+        table = "user_server"
