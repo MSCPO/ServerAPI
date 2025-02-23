@@ -22,7 +22,7 @@ async def verify_recaptcha(captcha_response: str) -> bool:
         )
         result: dict = response.json()
         logger.info(result)
-        return result.get("success")
+        return result.get("success", False)
 
 
 async def update_last_login(user: User, ip: str):

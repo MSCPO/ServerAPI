@@ -179,10 +179,10 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
 
     token = generate_token()
     # 检擦token是否有重复
-    while redis_client.get(f"verify:{token}"):
+    while await redis_client.get(f"verify:{token}"):
         token = generate_token()
 
-    redis_client.setex(
+    await redis_client.setex(
         f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
     )
     background_tasks.add_task(send_verification_email, request.email, token)
@@ -211,7 +211,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
 )
 async def verify(token: str):
     decode_data = await get_token_data(token)
-    redis_client.setex(
+    await redis_client.setex(
         f"verify:{token}",
         86400,
         json.dumps({"email": decode_data["email"], "verified": True}),

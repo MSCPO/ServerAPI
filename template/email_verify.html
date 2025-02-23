@@ -195,7 +195,11 @@
                         margin: 16px 0;
                         color: rgb(107, 114, 128);
                       ">
-                                            “银河的星光在雪地上流淌，仿佛无数冰凌碎裂时迸发的寒光，却又温柔地拥抱着这片寂静的虚空。” —— 川端康成 《雪国》
+                                            {% if from_who %}
+                                            “{{ sentence }}” —— {{ author }}《{{ from_who }}》
+                                            {% else %}
+                                            "{{ sentence }}" —— {{ author }}《{{ from_who }}
+                                            {% endif %}
                                         </p>
                                     </td>
                                 </tr>

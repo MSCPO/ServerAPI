@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from zoneinfo import ZoneInfo
 
+import httpx
 from jinja2 import Template
 from passlib.context import CryptContext
 
@@ -40,6 +41,14 @@ def generate_token() -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
 
+async def asentence() -> dict:
+    """获取一言"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://international.v1.hitokoto.cn")
+        data: dict = response.json()
+        return data
+
+
 def render_html_template(template_path, **kwargs):
     """渲染 HTML 模板"""
     with open(template_path, encoding="utf-8") as file:
@@ -48,7 +57,7 @@ def render_html_template(template_path, **kwargs):
     return template.render(**kwargs)
 
 
-def send_verification_email(to_email: str, token: str):
+async def send_verification_email(to_email: str, token: str):
     """发送验证邮件"""
     from_email = settings.FROM_EMAIL
     password = settings.FROM_EMAIL_PASSWORD
@@ -57,11 +66,17 @@ def send_verification_email(to_email: str, token: str):
     msg["From"] = from_email
     msg["To"] = to_email
     msg["Subject"] = "[MSCPO] 登陆系统验证"
-
+    asentence_data = await asentence()
+    sentence = asentence_data["hitokoto"]
+    author = asentence_data["from"]
+    from_who = asentence_data["from_who"]
     body = render_html_template(
         "template/email_verify.html",
         token=token,
         fullyear=datetime.now(ZoneInfo("Asia/Shanghai")).year,
+        sentence=sentence,
+        author=author,
+        from_who=from_who,
     )
     msg.attach(MIMEText(body, "html", "utf-8"))
 
@@ -83,6 +98,7 @@ def _send_mail(from_email: str, password: str, msg: MIMEMultipart, to_email: str
 def validate_username(username: str) -> bool:
     """用户名认证(4-16 位中文、字毮、数字、下划线、减号)"""
     return bool(re.match(r"[\u4e00-\u9fa5\w-]{4,16}", username))
+
 
 PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
