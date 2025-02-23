@@ -25,6 +25,7 @@ from app.services.conn.redis import redis_client
 from app.services.user.models import User
 from app.services.utils import (
     generate_token,
+    get_token_data,
     hash_password,
     send_verification_email,
     validate_password,
@@ -210,23 +211,16 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     },
 )
 async def verify(token: str):
-    decode_data = await get_token_data(token)
+    verify_data = await get_token_data(token)
     await redis_client.setex(
         f"verify:{token}",
         86400,
-        json.dumps({"email": decode_data["email"], "verified": True}),
+        json.dumps({"email": verify_data["email"], "verified": True}),
     )
 
     return {"message": "验证成功", "success": True}
 
 
-async def get_token_data(token) -> dict[str, str]:
-    verify_data: bytes = await redis_client.get(f"verify:{token}")
-    if verify_data is None:
-        raise HTTPException(status_code=404, detail="Token not found")
-    if verify_data:
-        decode_data: dict = json.loads(verify_data.decode())
-    return decode_data
 
 
 @router.post(

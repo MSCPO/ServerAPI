@@ -1,5 +1,6 @@
 """工具函数模块"""
 
+import json as json
 import random
 import re
 import smtplib
@@ -10,11 +11,13 @@ from email.mime.text import MIMEText
 from zoneinfo import ZoneInfo
 
 import httpx
+from fastapi import HTTPException
 from jinja2 import Template
 from passlib.context import CryptContext
 
 from app.config import settings
 from app.log import logger
+from app.services.conn.redis import redis_client
 
 
 def validate_password(password: str) -> bool:
@@ -47,6 +50,14 @@ async def asentence() -> dict:
         response = await client.get("https://international.v1.hitokoto.cn")
         data: dict = response.json()
         return data
+
+
+async def get_token_data(token) -> dict[str, str]:
+    verify_data: bytes = await redis_client.get(f"verify:{token}")
+    if verify_data is None:
+        raise HTTPException(status_code=404, detail="Token not found")
+    data: dict = json.loads(verify_data)
+    return data
 
 
 def render_html_template(template_path, **kwargs):
