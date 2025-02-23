@@ -21,7 +21,7 @@ async def run_git_pull_and_restart():
                 "config",
                 "--all",
                 "--global",
-                rf'url."{settings.MIRROR_URL}".insteadOf "https://github.com/"',
+                rf'url."{settings.MIRROR_URL}https://github.com/".insteadOf "https://github.com/"',
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
