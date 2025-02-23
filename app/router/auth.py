@@ -123,8 +123,7 @@ class recapcha_sitekey(BaseModel):
 
 
 class ReturnResponse(BaseModel):
-    success: bool = Field(True, title="成功", description="是否成功")
-    message: str = Field(..., title="消息", description="状态返回消息")
+    detail: str = Field(..., title="消息", description="状态返回消息")
 
 
 class ReturnResponse_Register(ReturnResponse):
@@ -146,8 +145,7 @@ class Email_Register(captchaResponse):
             "content": {
                 "application/json": {
                     "example": {
-                        "message": "验证邮件已发送，请查收您的邮箱",
-                        "success": True,
+                        "detail": "验证邮件已发送，请查收您的邮箱",
                     }
                 }
             },
@@ -187,7 +185,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
         f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
     )
     background_tasks.add_task(send_verification_email, request.email, token)
-    return {"message": "验证邮件已发送，请查收您的邮箱", "success": True}
+    return {"detail": "验证邮件已发送，请查收您的邮箱"}
 
 
 @router.post(
@@ -198,11 +196,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     responses={
         200: {
             "description": "验证成功",
-            "content": {
-                "application/json": {
-                    "example": {"message": "验证成功", "success": True}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "验证成功"}}},
         },
         404: {
             "description": "Token 未找到",
@@ -218,9 +212,7 @@ async def verify(token: str):
         json.dumps({"email": verify_data["email"], "verified": True}),
     )
 
-    return {"message": "验证成功", "success": True}
-
-
+    return {"detail": "验证成功"}
 
 
 @router.post(
@@ -233,7 +225,7 @@ async def verify(token: str):
             "description": "用户注册成功",
             "content": {
                 "application/json": {
-                    "example": {"message": "用户注册成功", "user_id": 123}
+                    "example": {"detail": "用户注册成功", "user_id": 123}
                 }
             },
         },
@@ -340,7 +332,7 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建用户失败"
         ) from e
 
-    return {"message": "用户注册成功", "user_id": user.id}
+    return {"detail": "用户注册成功", "user_id": user.id}
 
 
 @router.get(
@@ -360,7 +352,7 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
             "description": "reCAPTCHA site-key 未配置",
             "content": {
                 "application/json": {
-                    "example": {"message": "reCAPTCHA site key not configured"}
+                    "example": {"detail": "reCAPTCHA site key not configured"}
                 }
             },
         },
@@ -376,5 +368,5 @@ def get_reCAPTCHA_site_key():
         return recapcha_sitekey(recapcha_sitekey=site_key)
     else:
         return JSONResponse(
-            status_code=400, content={"message": "reCAPTCHA site key not configured"}
+            status_code=400, content={"detail": "reCAPTCHA site key not configured"}
         )
