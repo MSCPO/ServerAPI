@@ -93,7 +93,11 @@ async def login(user: UserLogin, request: Request):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
         )
-    db_user = await User.get_or_none(username=user.username)
+    # 检测是否为邮箱登录
+    if "@" in user.username_or_email:
+        db_user = await User.get_or_none(email=user.username_or_email)
+    else:
+        db_user = await User.get_or_none(username=user.username)
     if db_user is None or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,30 +213,6 @@ async def verify(token: str):
     )
 
     return {"message": "验证成功", "success": True}
-
-
-# 注册请求体
-class RegisterRequest(BaseModel):
-    password: str = Field(
-        ...,
-        title="密码",
-        description="用户的密码，长度为 8-16 位，至少包含数字、大写字毸、小写字母和特殊字符中的两种",
-    )
-    display_name: str = Field(
-        None,
-        title="显示名称",
-        description="用户的显示名称，长度不超过 16 位",
-    )
-    token: str = Field(
-        ...,
-        title="Token",
-        description="用户的注册token",
-    )
-    captcha_response: str = Field(
-        ...,
-        title="reCAPTCHA 响应",
-        description="reCAPTCHA 响应",
-    )
 
 
 @router.post(
