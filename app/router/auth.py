@@ -19,7 +19,7 @@ from app.services.auth.crud import (
     update_last_login,
     verify_recaptcha,
 )
-from app.services.auth.schemas import RegisterRequest, UserLogin
+from app.services.auth.schemas import RegisterRequest, UserLogin, captchaResponse
 from app.services.conn.redis import redis_client
 from app.services.user.models import User
 from app.services.utils import (
@@ -83,11 +83,7 @@ async def get_real_client_ip(request: Request) -> str:
 )
 async def login(user: UserLogin, request: Request):
     """
-    用户登录，验证凭证并返回 JWT token。
-
-    - `user`: 包含用户名、密码和验证码响应的登录数据。
-
-    成功时返回访问令牌，失败时返回错误信息。
+    用户登录，验证凭证并返回 JWT token
     """
     if not await verify_recaptcha(user.captcha_response):
         raise HTTPException(
@@ -130,10 +126,15 @@ class ReturnResponse_Register(ReturnResponse):
     user_id: int = Field(..., title="用户ID", description="用户ID")
 
 
+class Email_Register(captchaResponse):
+    email: str = Field(..., title="邮箱", description="用户的邮箱")
+
+
 @router.post(
     "/verifyemail",
     response_model=ReturnResponse,
-    summary="用户注册",
+    summary="邮箱注册",
+    description="验证邮箱是否存在，若不存在则发送注册邮件（有效期 15 分钟）",
     responses={
         200: {
             "description": "通过验证，发送验证邮箱",
@@ -157,12 +158,12 @@ class ReturnResponse_Register(ReturnResponse):
         409: {
             "description": "邮箱已存在",
             "content": {
-                "application/json": {"example": {"detail": "Email already exists"}}
+                "application/json": {"邮箱已存在": {"detail": "Email already exists"}}
             },
         },
     },
 )
-async def verifyemail(request: RegisterRequest, background_tasks: BackgroundTasks):
+async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks):
     if not await verify_recaptcha(request.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
@@ -186,7 +187,8 @@ async def verifyemail(request: RegisterRequest, background_tasks: BackgroundTask
 
 @router.post(
     "/verify/{token}",
-    summary="用户注册验证",
+    summary="邮箱验证",
+    description="验证邮箱注册的 Token，若验证成功则将 Token 标记为正在验证（有效期延长至 24 小时）",
     response_model=ReturnResponse,
     responses={
         200: {
@@ -218,7 +220,8 @@ async def verify(token: str):
 @router.post(
     "/register",
     response_model=ReturnResponse_Register,
-    summary="用户注册",
+    summary="注册",
+    description="用户注册，验证 Token 后注册用户",
     responses={
         200: {
             "description": "用户注册成功",
@@ -255,8 +258,8 @@ async def verify(token: str):
             },
         },
         409: {
-            "description": "Token 已被验证",
-            "content": {"application/json": {"example": {"detail": "未被验证"}}},
+            "description": "Token 未验证",
+            "content": {"application/json": {"Token 未验证": {"detail": "未被验证"}}},
         },
         500: {
             "description": "服务器内部错误",
