@@ -3,13 +3,14 @@
 import json as json
 import random
 import re
-import smtplib
 import string
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from zoneinfo import ZoneInfo
 
+import aiosmtplib
 import httpx
 from fastapi import HTTPException
 from jinja2 import Template
@@ -74,7 +75,7 @@ async def send_verification_email(to_email: str, token: str):
     password = settings.FROM_EMAIL_PASSWORD
 
     msg = MIMEMultipart()
-    msg["From"] = from_email
+    msg["From"] = formataddr(pair=("MSCPO验证系统", "support@tblstudio.cn"))
     msg["To"] = to_email
     msg["Subject"] = "[MSCPO] 登陆系统验证"
     asentence_data = await asentence()
@@ -92,18 +93,21 @@ async def send_verification_email(to_email: str, token: str):
     msg.attach(MIMEText(body, "html", "utf-8"))
 
     try:
-        _send_mail(from_email, password, msg, to_email)
+        await _send_email(from_email, password, msg, to_email)
     except Exception as e:
         logger.error(f"Failed to send email: {e}")
 
 
-def _send_mail(from_email: str, password: str, msg: MIMEMultipart, to_email: str):
+async def _send_email(
+    from_email: str, password: str, msg: MIMEMultipart, to_email: str
+):
     """发送邮件"""
-    server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT)
-    server.login(from_email, password)
-    text = msg.as_string()
-    server.sendmail(from_email, to_email, text)
-    server.quit()
+    async with aiosmtplib.SMTP(
+        hostname=settings.SMTP_SERVER, port=settings.SMTP_PORT, use_tls=True
+    ) as server:
+        await server.login(from_email, password)
+        text = msg.as_string()
+        await server.sendmail(from_email, to_email, text)
 
 
 def validate_username(username: str) -> bool:
