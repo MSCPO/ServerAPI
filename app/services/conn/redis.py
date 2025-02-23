@@ -1,6 +1,6 @@
-import redis
+import aioredis
 
-redis_client = redis.StrictRedis(
+redis_client = aioredis.StrictRedis(
     host="192.168.10.112",
     port=6379,
     db=0,
