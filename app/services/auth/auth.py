@@ -19,7 +19,7 @@ def create_access_token(data: dict, expires_delta: None | timedelta = None):
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-async def verify_token(token: str):
+async def verify_token(token: str) -> None | dict:
     if await redis_client.get(f"token:invalid:{token}"):
         return None
     try:
