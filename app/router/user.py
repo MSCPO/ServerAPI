@@ -68,5 +68,22 @@ async def get_me(request: Request):
     token = authorization[7:]
 
     user = await get_current_user(token)
+    user_data = await User.get(username=user["sub"])
 
-    return UserSchema.model_validate(await User.get(username=user["sub"]))
+    if user_data.avatar_hash is None:
+        avatar_url = None
+    else:
+        file_instance = await user_data.avatar_hash
+        avatar_url = file_instance.file_path
+    return UserSchema(
+        id=user_data.id,
+        username=user_data.username,
+        email=user_data.email,
+        display_name=user_data.display_name,
+        role=user_data.role,
+        is_active=user_data.is_active,
+        created_at=user_data.created_at,
+        last_login=user_data.last_login,
+        last_login_ip=user_data.last_login_ip,
+        avatar_url=avatar_url,
+    )

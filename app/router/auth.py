@@ -32,6 +32,7 @@ from app.services.utils import (
     get_token_data,
     hash_password,
     send_verification_email,
+    validate_email,
     validate_password,
     validate_username,
     verify_password,
@@ -155,29 +156,33 @@ class Email_Register(captchaResponse):
             },
         },
         400: {
-            "description": "reCAPTCHA 验证失败",
+            "description": "参数错误",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Invalid reCAPTCHA response"}
+                    "examples": {
+                        "邮箱格式错误": {"detail": "邮箱格式错误"},
+                        "无效的 reCAPTCHA 响应": {"detail": "无效的 reCAPTCHA 响应"},
+                    }
                 }
             },
         },
         409: {
             "description": "邮箱已存在",
-            "content": {
-                "application/json": {"邮箱已存在": {"detail": "Email already exists"}}
-            },
+            "content": {"application/json": {"邮箱已存在": {"detail": "邮箱已存在"}}},
         },
     },
 )
 async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks):
     if not await verify_recaptcha(request.captcha_response):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 reCAPTCHA 响应"
         )
     if await User.get_or_none(email=request.email):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
+
+    if validate_email(request.email):
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式错误"
         )
 
     token = generate_token()
@@ -247,9 +252,11 @@ from app.log import logger
                         "显示名称无效": {"detail": "显示名称无效"},
                         "显示名称已存在": {"detail": "显示名称已存在"},
                         "头像文件名无效": {"detail": "头像文件名无效"},
-                        "头像必须为JPG或PNG格式": {"detail": "头像必须为JPG或PNG格式"},
-                        "头像文件大小不能超过15MB": {
-                            "detail": "头像文件大小不能超过15MB"
+                        "File type image/jpeg not allowed": {
+                            "detail": "File type image/jpeg not allowed"
+                        },
+                        "头像文件大小不能超过 2 MB": {
+                            "detail": "头像文件大小不能超过 2 MB"
                         },
                         "头像必须是正方形": {"detail": "头像必须是正方形"},
                         "头像文件无效": {"detail": "头像文件无效"},
@@ -326,17 +333,23 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件名无效"
         )
 
-    if not avatar.filename.lower().endswith(("jpg", "jpeg", "png")):
+    allowed_content_types = ["image/jpeg", "image/png", "image/webp"]
+
+    if avatar.content_type not in allowed_content_types:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须为JPG或PNG格式"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type {avatar.content_type} not allowed",
         )
-    if len(await avatar.read()) > 2 * 1024 * 1024:
+
+    content = await avatar.read()
+    if len(content) > 2 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件大小不能超过 2 MB"
         )
-
+    with open("test.jpg", "wb") as f:
+        f.write(await avatar.read())
     try:
-        await avatar.seek(0)
+        avatar.file.seek(0)
         image = Image.open(BytesIO(await avatar.read()))
         width, height = image.size
         if width != height:
@@ -350,7 +363,7 @@ async def register(
         ) from e
 
     try:
-        avatar_url = await upload_file_to_s3(await avatar.read(), avatar.filename)
+        avatar_file = (await upload_file_to_s3(content, avatar.filename))[1]
     except Exception as e:
         logger.error(f"Failed to upload avatar: {e}")
         raise HTTPException(
@@ -368,13 +381,15 @@ async def register(
             email=verify_data["email"],
             display_name=register_data.display_name,
             hashed_password=hash_password(register_data.password),
-            avatar_url=avatar_url,
+            avatar_hash=avatar_file,
             is_active=True,
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建用户失败"
         ) from e
+
+    # 删除 token
 
     return {"detail": "用户注册成功", "user_id": user.id}
 

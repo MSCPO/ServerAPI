@@ -3,14 +3,11 @@ from enum import Enum
 from tortoise import fields
 from tortoise.models import Model
 
+from app.file_storage.models import File
 from app.services.conn.db import add_model
+from app.services.user.schemas import RoleEnum
 
 add_model(__name__)
-
-
-class RoleEnum(str, Enum):
-    user = "user"
-    admin = "admin"
 
 
 class BanTypeEnum(str, Enum):
@@ -38,8 +35,10 @@ class User(Model):
     email = fields.CharField(max_length=100, unique=True)
     display_name = fields.CharField(max_length=16)
     hashed_password = fields.CharField(max_length=60)
-    avatar_url = fields.CharField(max_length=255, null=True)
-    role = fields.CharEnumField(RoleEnum, default=RoleEnum.user)
+    avatar_hash: fields.ForeignKeyRelation[File] | None = fields.ForeignKeyField(
+        "default.File", related_name="avatar_hash", on_delete=fields.SET_NULL, null=True
+    )
+    role: RoleEnum = fields.CharEnumField(RoleEnum, default=RoleEnum.user)
     is_active = fields.BooleanField(default=False)
     created_at = fields.DatetimeField(auto_now_add=True)
     last_login = fields.DatetimeField(null=True)
