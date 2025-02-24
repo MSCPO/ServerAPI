@@ -42,6 +42,7 @@ class UserUpdate(UserBase):
 
 class User(UserBase):
     id: int = Field(..., description="用户的唯一标识符")
+    avatar_url: str | None = Field(None, max_length=255, description="用户的头像URL")
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
     last_login_ip: str | None = Field(
