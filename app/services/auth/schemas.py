@@ -32,8 +32,3 @@ class RegisterRequest(captchaResponse):
         title="Token",
         description="用户的注册token",
     )
-    captcha_response: str = Field(
-        ...,
-        title="reCAPTCHA 响应",
-        description="reCAPTCHA 响应",
-    )

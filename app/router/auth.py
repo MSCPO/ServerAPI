@@ -1,10 +1,12 @@
 import uuid
+from io import BytesIO
 
 import ujson as json
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -217,6 +219,9 @@ async def verify(token: str):
     return {"detail": "验证成功"}
 
 
+from app.log import logger
+
+
 @router.post(
     "/register",
     response_model=ReturnResponse_Register,
@@ -274,23 +279,29 @@ async def verify(token: str):
         },
     },
 )
-async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
-    # 验证reCAPTCHA
-    if not await verify_recaptcha(request.captcha_response):
+async def register(
+    request: str = Form(...),  # 接收字符串形式的 JSON
+    avatar: UploadFile = File(...),  # 接收上传的文件
+):
+    request_data: dict = json.loads(request)
+    logger.info(f"Register request: {request_data}")
+    register_data = RegisterRequest(**request_data)
+
+    if not await verify_recaptcha(register_data.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="无效的reCAPTCHA响应",
         )
 
     # 验证密码强度
-    if not validate_password(request.password):
+    if not validate_password(register_data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符",
         )
 
     # 验证Token
-    verify_data = await get_token_data(request.token)
+    verify_data = await get_token_data(register_data.token)
     if verify_data is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
@@ -301,11 +312,11 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         )
 
     # 验证用户名是否唯一
-    if validate_username(request.display_name):
+    if not validate_username(register_data.display_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称无效"
         )
-    if await User.get_or_none(display_name=request.display_name):
+    if await User.get_or_none(display_name=register_data.display_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称已存在"
         )
@@ -319,20 +330,21 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须为JPG或PNG格式"
         )
-    if len(await avatar.read()) > 2 * 1024 * 1024:  # 15MB
+    if len(await avatar.read()) > 2 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件大小不能超过 2 MB"
         )
 
     try:
         await avatar.seek(0)
-        image = Image.open(await avatar.read())
+        image = Image.open(BytesIO(await avatar.read()))
         width, height = image.size
         if width != height:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须是正方形"
             )
     except Exception as e:
+        logger.error(f"Failed to open image: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件无效"
         ) from e
@@ -340,6 +352,7 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
     try:
         avatar_url = await upload_file_to_s3(await avatar.read(), avatar.filename)
     except Exception as e:
+        logger.error(f"Failed to upload avatar: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="头像上传失败"
         ) from e
@@ -353,8 +366,8 @@ async def register(request: RegisterRequest, avatar: UploadFile = File(...)):
         user = await User.create(
             username=username,
             email=verify_data["email"],
-            display_name=request.display_name,
-            hashed_password=hash_password(request.password),
+            display_name=register_data.display_name,
+            hashed_password=hash_password(register_data.password),
             avatar_url=avatar_url,
             is_active=True,
         )
