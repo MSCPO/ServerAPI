@@ -180,7 +180,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     if await User.get_or_none(email=request.email):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
 
-    if validate_email(request.email):
+    if not validate_email(request.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式错误"
         )
@@ -323,6 +323,7 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称无效"
         )
+
     if await User.get_or_none(display_name=register_data.display_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称已存在"

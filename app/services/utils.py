@@ -112,7 +112,9 @@ async def _send_email(
 
 def validate_username(username: str) -> bool:
     """用户名认证(4-16 位中文、字毮、数字、下划线、减号)"""
-    return bool(re.match(r"[\u4e00-\u9fa5\w-]{4,16}", username))
+    if len(username) < 4 or len(username) > 16:
+        return False
+    return bool(re.match(r"[\u4e00-\u9fa5\w-]+", username))
 
 
 PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
