@@ -2,6 +2,10 @@ import hashlib
 
 from tortoise import Model, fields
 
+from app.services.conn.db import add_model
+
+add_model(__name__)
+
 
 class File(Model):
     hash_value = fields.CharField(max_length=64, pk=True)
