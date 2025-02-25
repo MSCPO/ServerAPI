@@ -249,7 +249,9 @@ from app.log import logger
                         "密码无效": {
                             "detail": "密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符"
                         },
-                        "显示名称无效": {"detail": "显示名称无效"},
+                        "显示名称无效": {
+                            "detail": "显示名称必须 (4-16 位中文、字毮、数字、下划线、减号)"
+                        },
                         "显示名称已存在": {"detail": "显示名称已存在"},
                         "头像文件名无效": {"detail": "头像文件名无效"},
                         "File type image/jpeg not allowed": {
@@ -321,7 +323,8 @@ async def register(
     # 验证用户名是否唯一
     if not validate_username(register_data.display_name):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称无效"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="显示名称必须 (4-16 位中文、字毮、数字、下划线、减号)",
         )
 
     if await User.get_or_none(display_name=register_data.display_name):
