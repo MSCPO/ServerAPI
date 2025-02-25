@@ -347,8 +347,7 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件大小不能超过 2 MB"
         )
-    with open("test.jpg", "wb") as f:
-        f.write(await avatar.read())
+
     try:
         avatar.file.seek(0)
         image = Image.open(BytesIO(await avatar.read()))
@@ -391,6 +390,7 @@ async def register(
         ) from e
 
     # 删除 token
+    await redis_client.delete(f"verify:{register_data.token}")
 
     return {"detail": "用户注册成功", "user_id": user.id}
 
