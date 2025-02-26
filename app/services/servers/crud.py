@@ -79,7 +79,8 @@ async def GetServer_by_id_editor(
     ).exists()
     if not is_role:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="你咩有权限编辑它！它拒绝了你！",
         )
     server = await Server.get_or_none(id=server_id)
     server_status = await ServerStatus.get_or_none(server=server)

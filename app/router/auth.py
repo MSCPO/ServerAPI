@@ -205,11 +205,11 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     responses={
         200: {
             "description": "验证成功",
-            "content": {"application/json": {"example": {"detail": "验证成功"}}},
+            "content": {"application/json": {"example": {"detail": "Token 验证成功"}}},
         },
         404: {
             "description": "Token 未找到",
-            "content": {"application/json": {"example": {"detail": "Token not found"}}},
+            "content": {"application/json": {"example": {"detail": "Token 无效"}}},
         },
     },
 )
@@ -221,7 +221,7 @@ async def verify(token: str):
         json.dumps({"email": verify_data["email"], "verified": True}),
     )
 
-    return {"detail": "验证成功"}
+    return {"detail": "Token 验证成功"}
 
 
 from app.log import logger
