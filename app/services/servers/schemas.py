@@ -81,3 +81,14 @@ class GetServerIdShowAPI(GetServer):
 
     class Config:
         from_attributes = True
+
+
+class UpdateServerRequest(BaseModel):
+    name: str = Field(..., title="服务器名称", description="服务器的名称")
+    ip: str = Field(..., title="服务器IP", description="服务器的IP地址")
+    desc: str = Field(..., title="服务器描述", description="对服务器的简短描述")
+    tags: list[str] = Field(
+        ...,
+        title="服务器标签",
+        description="与服务器相关的标签（如：生存、创造、PVP等）",
+    )

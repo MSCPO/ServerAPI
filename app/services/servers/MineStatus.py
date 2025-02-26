@@ -14,11 +14,12 @@ async def get_server_stats(host: str, server_type: str):
     Returns:
         dict: A dictionary containing the server's status or an error message.
     """
+    response: JavaStatusResponse | BedrockStatusResponse | None = None
     try:
         if server_type == "JAVA":
-            response: JavaServer = await _handle_java_stats(host)
+            response = await _handle_java_stats(host)
         elif server_type == "BEDROCK":
-            response: BedrockStatusResponse = await _handle_bedrock_stats(host)
+            response = await _handle_bedrock_stats(host)
         else:
             raise ValueError("Unsupported server type")
 
