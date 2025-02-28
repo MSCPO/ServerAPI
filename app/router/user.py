@@ -64,8 +64,7 @@ async def get_me(request: Request):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # 提取 token 字符串
-    token = authorization[7:]
+    token = authorization.split(" ")[1]
 
     user = await get_current_user(token)
     user_data = await User.get(username=user["sub"])

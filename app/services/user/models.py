@@ -48,12 +48,15 @@ class User(Model):
         table = "users"
 
 
+class SerRoleEnum(str, Enum):
+    owner = "owner"
+    admin = "admin"
+
+
 class UserServer(Model):
     user = fields.ForeignKeyField("default.User", on_delete=fields.CASCADE)
     server = fields.ForeignKeyField("default.Server", on_delete=fields.CASCADE)
-    role = fields.CharField(
-        max_length=50, choices=[("owner", "Owner"), ("admin", "Admin")]
-    )
+    role: SerRoleEnum = fields.CharEnumField(max_length=50, enum_type=SerRoleEnum)
 
     class Meta:
         table = "user_server"

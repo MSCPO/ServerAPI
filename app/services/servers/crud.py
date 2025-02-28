@@ -36,10 +36,17 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> GetServerShow
     )
 
 
-async def GetServer_by_id(server_id: int) -> None | GetServerIdShowAPI:
+async def GetServer_by_id(
+    server_id: int, user: int | None
+) -> None | GetServerIdShowAPI:
     server = await Server.get_or_none(id=server_id)
     server_status = await ServerStatus.get_or_none(server=server)
+    user_server = None
+    if user:
+        user_server = await UserServer.get_or_none(user=user, server=server_id)
+
     if server:
+        permission = user_server.role if user_server else "guest"
         return GetServerIdShowAPI(
             id=server.id,
             name=server.name,
@@ -66,6 +73,7 @@ async def GetServer_by_id(server_id: int) -> None | GetServerIdShowAPI:
             )
             if server_status and server_status.stat_data
             else None,
+            permission=permission,
         )
     return None
 
@@ -84,7 +92,13 @@ async def GetServer_by_id_editor(
         )
     server = await Server.get_or_none(id=server_id)
     server_status = await ServerStatus.get_or_none(server=server)
+    user_server = await UserServer.get_or_none(
+        user=current_user["id"], server=server_id
+    )
+
     if server:
+        permission = user_server.role if user_server else "guest"
+
         return GetServerIdShowAPI(
             id=server.id,
             name=server.name,
@@ -111,5 +125,6 @@ async def GetServer_by_id_editor(
             )
             if server_status and server_status.stat_data
             else None,
+            permission=permission,
         )
     return None

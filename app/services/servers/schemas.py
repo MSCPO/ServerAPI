@@ -78,6 +78,11 @@ class GetServerIdShowAPI(GetServer):
     status: GetServerStatusAPI | None = Field(
         ..., title="服务器状态", description="显示服务器的在线状态信息"
     )
+    permission: str = Field(
+        ...,
+        title="服务器权限",
+        description="服务器的权限",
+    )
 
     class Config:
         from_attributes = True
