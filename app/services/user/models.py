@@ -5,7 +5,7 @@ from tortoise.models import Model
 
 from app.file_storage.models import File
 from app.services.conn.db import add_model
-from app.services.user.schemas import RoleEnum
+from app.services.servers.models import Server
 
 add_model(__name__)
 
@@ -14,6 +14,16 @@ class BanTypeEnum(str, Enum):
     mute = "mute"  # 禁言
     ban = "ban"  # 封号
     temp_ban = "temp_ban"  # 临时封禁
+
+
+class SerRoleEnum(str, Enum):
+    owner = "owner"
+    admin = "admin"
+
+
+class RoleEnum(str, Enum):
+    user = "user"
+    admin = "admin"
 
 
 class BanRecord(Model):
@@ -48,14 +58,13 @@ class User(Model):
         table = "users"
 
 
-class SerRoleEnum(str, Enum):
-    owner = "owner"
-    admin = "admin"
-
-
 class UserServer(Model):
-    user = fields.ForeignKeyField("default.User", on_delete=fields.CASCADE)
-    server = fields.ForeignKeyField("default.Server", on_delete=fields.CASCADE)
+    user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "default.User", on_delete=fields.CASCADE
+    )
+    server: fields.ForeignKeyRelation[Server] = fields.ForeignKeyField(
+        "default.Server", on_delete=fields.CASCADE
+    )
     role: SerRoleEnum = fields.CharEnumField(max_length=50, enum_type=SerRoleEnum)
 
     class Meta:

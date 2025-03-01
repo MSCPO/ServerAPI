@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, status
 
 from app.services.user.crud import get_current_user
-from app.services.user.models import User
+from app.services.user.models import User, UserServer
 from app.services.user.schemas import User as UserSchema
 
 router = APIRouter()
@@ -15,38 +15,12 @@ router = APIRouter()
     responses={
         200: {
             "description": "成功返回当前用户信息",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "username": "test",
-                        "email": "test@example.com",
-                        "display_name": None,
-                        "avatar_url": "https://www.gravatar.com/avatar/098f6bcd4621d373cade4e832627b4f6?s=100x100&d=retro",
-                        "role": "user",
-                        "is_active": False,
-                        "id": 1,
-                        "created_at": "2025-02-20T11:36:45.530878+08:00",
-                        "last_login": "2025-02-22T00:15:56.934187+08:00",
-                        "last_login_ip": "xxx.xxx.xxx.xxx",
-                    }
-                }
-            },
         },
         401: {
             "description": "未授权，缺少或无效的 Bearer token",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Authorization token missing or invalid"}
-                }
-            },
         },
         404: {
             "description": "未找到用户，token 验证通过但未能找到对应的用户",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Could not validate credentials"}
-                }
-            },
         },
     },
 )
@@ -74,6 +48,11 @@ async def get_me(request: Request):
     else:
         file_instance = await user_data.avatar_hash
         avatar_url = file_instance.file_path
+    UserServer_instance: list[UserServer] = await UserServer.filter(user=user_data)
+    servers = [
+        (server.role, (await server.server).id) for server in UserServer_instance
+    ]
+
     return UserSchema(
         id=user_data.id,
         username=user_data.username,
@@ -85,4 +64,5 @@ async def get_me(request: Request):
         last_login=user_data.last_login,
         last_login_ip=user_data.last_login_ip,
         avatar_url=avatar_url,
+        servers=servers,
     )

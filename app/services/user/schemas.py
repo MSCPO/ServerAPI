@@ -3,10 +3,9 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.services.user.models import RoleEnum, SerRoleEnum
 
-class RoleEnum(str, Enum):
-    user = "user"
-    admin = "admin"
+
 
 
 class BanTypeEnum(str, Enum):
@@ -47,6 +46,10 @@ class User(UserBase):
     avatar_url: str | None = Field(None, description="用户的头像URL")
     last_login_ip: str | None = Field(
         None, max_length=15, description="用户最后登录IP地址"
+    )
+    # 拥有的服务器列表
+    servers: list[tuple[SerRoleEnum, int]] = Field(
+        [], description="用户拥有的服务器 ID 列表"
     )
 
     class Config:
