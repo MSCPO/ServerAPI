@@ -97,3 +97,5 @@ class UpdateServerRequest(BaseModel):
         title="服务器标签",
         description="与服务器相关的标签（如：生存、创造、PVP等）",
     )
+    version: str = Field(..., title="服务器版本", description="服务器运行的版本")
+    link: str = Field(..., title="服务器链接", description="指向服务器详情的链接")

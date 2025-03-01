@@ -273,12 +273,24 @@ async def update_server(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="服务器 IP 无效"
         )
+    # version 不超过25个字符
+    if len(update_data.version) > 25:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="version 字符长度不能超过25"
+        )
+    import re
 
+    if not re.match(r"^https?:/{2}\w.+$", update_data.link):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="link 不合法"
+        )
     # 只更新允许的字段
     server.name = update_data.name
     server.ip = update_data.ip
     server.desc = update_data.desc
     server.tags = update_data.tags
+    server.version = update_data.version
+    server.link = update_data.link
 
     # 保存更新后的服务器信息
     await server.save()
