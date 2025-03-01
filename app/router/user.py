@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from app.services.user.crud import get_current_user
 from app.services.user.models import User, UserServer
 from app.services.user.schemas import User as UserSchema
+from app.services.user.utils import get_user_avatar_url
 
 router = APIRouter()
 
@@ -41,13 +42,10 @@ async def get_me(request: Request):
     token = authorization.split(" ")[1]
 
     user = await get_current_user(token)
-    user_data = await User.get(username=user["sub"])
+    user_data: User = await User.get(username=user["sub"])
 
-    if user_data.avatar_hash is None:
-        avatar_url = None
-    else:
-        file_instance = await user_data.avatar_hash
-        avatar_url = file_instance.file_path
+    avatar_url = await get_user_avatar_url(user_data)
+
     UserServer_instance: list[UserServer] = await UserServer.filter(user=user_data)
     servers = [
         (server.role, (await server.server).id) for server in UserServer_instance
