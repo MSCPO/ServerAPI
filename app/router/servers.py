@@ -274,13 +274,16 @@ async def update_server(
             status_code=status.HTTP_400_BAD_REQUEST, detail="服务器 IP 无效"
         )
     # version 不超过25个字符
-    if len(update_data.version) > 25:
+    if len(update_data.version) > 20:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="version 字符长度不能超过25"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="版本不能超过 20 字"
         )
     import re
 
-    if not re.match(r"^https?:/{2}\w.+$", update_data.link):
+    if update_data.link and (
+        not re.match(r"^https?:/{2}\w.+$", update_data.link)
+        or len(update_data.link) > 255
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="link 不合法"
         )
