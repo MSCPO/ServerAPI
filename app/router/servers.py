@@ -3,12 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from app.services.servers.crud import (
     GetServer_by_id,
     GetServer_by_id_editor,
+    GetServerOwners_by_id,
     GetServers,
 )
 from app.services.servers.MineStatus import get_server_stats
 from app.services.servers.models import Server
 from app.services.servers.schemas import (
     GetServerIdShowAPI,
+    GetServerManagers,
     GetServerShowAPI,
     UpdateServerRequest,
 )
@@ -302,3 +304,29 @@ async def update_server(
     if server := await GetServer_by_id_editor(server_id, current_user):
         return server
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器")
+
+
+# 返回这个服务器的所有管理人员
+@router.get(
+    "/servers/{server_id}/managers",
+    response_model=GetServerManagers,
+    summary="获取服务器的所有管理人员",
+    responses={
+        200: {
+            "description": "成功获取服务器的所有管理人员",
+        },
+        404: {
+            "description": "未找到该服务器",
+            "content": {"application/json": {"example": {"detail": "未找到该服务器"}}},
+        },
+    },
+)
+async def get_server_managers(server_id: int):
+    """
+    获取指定ID服务器的所有管理人员。
+
+    - `server_id`: 服务器的唯一标识符。
+
+    返回指定服务器的所有管理人员，如无法找到该服务器，则返回404。
+    """
+    return await GetServerOwners_by_id(server_id)

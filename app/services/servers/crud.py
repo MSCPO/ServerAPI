@@ -7,9 +7,11 @@ from app.services.servers.models import (
 from app.services.servers.schemas import (
     GetServer,
     GetServerIdShowAPI,
+    GetServerManagers,
     GetServerShowAPI,
     GetServerStatusAPI,
     Motd,
+    UserBase,
 )
 from app.services.user.models import UserServer
 
@@ -128,3 +130,22 @@ async def GetServer_by_id_editor(
             permission=permission,
         )
     return None
+
+
+# 返回一个服务器的所有主人
+async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
+    # 查找是否有这个服务器
+    server = await Server.get_or_none(id=server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
+        )
+
+    user_server = await UserServer.filter(server=server_id)
+    owners = [UserBase.model_validate(await user.user) for user in user_server]
+    admins = [
+        UserBase.model_validate(await user.user)
+        for user in user_server
+        if user.role == "admin"
+    ]
+    return GetServerManagers(owners=owners, admins=admins)

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from app.services.user.schemas import UserBase
+
 
 class Motd(BaseModel):
     plain: str = Field(..., title="纯文本MOTD", description="显示服务器的纯文本MOTD")
@@ -99,3 +101,16 @@ class UpdateServerRequest(BaseModel):
     )
     version: str = Field(..., title="服务器版本", description="服务器运行的版本")
     link: str = Field(..., title="服务器链接", description="指向服务器详情的链接")
+
+
+# 返回一个服务器的所有主人
+class GetServerManagers(BaseModel):
+    owners: list[UserBase] = Field(
+        ..., title="服务器主人", description="服务器的所有主人"
+    )
+    admins: list[UserBase] = Field(
+        ..., title="服务器管理员", description="服务器的所有管理员"
+    )
+
+    class Config:
+        from_attributes = True

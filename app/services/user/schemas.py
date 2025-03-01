@@ -6,8 +6,6 @@ from pydantic import BaseModel, Field
 from app.services.user.models import RoleEnum, SerRoleEnum
 
 
-
-
 class BanTypeEnum(str, Enum):
     mute = "mute"  # 禁言
     ban = "ban"  # 封号
@@ -15,11 +13,13 @@ class BanTypeEnum(str, Enum):
 
 
 class UserBase(BaseModel):
+    id: int = Field(..., description="用户的唯一标识符")
     username: str = Field(..., max_length=32, description="用户的用户名")
     email: str = Field(..., max_length=100, description="用户的电子邮箱")
     display_name: str = Field(max_length=16, description="用户的显示名称")
     role: RoleEnum = Field(RoleEnum.user, description="用户角色")
     is_active: bool = Field(False, description="用户是否激活")
+    avatar_url: str | None = Field(None, description="用户的头像URL")
 
     class Config:
         from_attributes = True
@@ -40,14 +40,11 @@ class UserUpdate(UserBase):
 
 
 class User(UserBase):
-    id: int = Field(..., description="用户的唯一标识符")
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
-    avatar_url: str | None = Field(None, description="用户的头像URL")
     last_login_ip: str | None = Field(
         None, max_length=15, description="用户最后登录IP地址"
     )
-    # 拥有的服务器列表
     servers: list[tuple[SerRoleEnum, int]] = Field(
         [], description="用户拥有的服务器 ID 列表"
     )
