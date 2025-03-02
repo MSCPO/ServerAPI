@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Request, status
 
 from app.services.user.crud import get_current_user
@@ -29,27 +31,28 @@ async def get_me(request: Request):
     """
     获取当前登录用户的详细信息
     """
-    # 从请求头获取 Bearer token
-    authorization: str | None = request.headers.get("Authorization")
-
-    if authorization is None or not authorization.startswith("Bearer "):
+    # 提取并验证 Bearer token
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization token missing or invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    token = auth_header.split(" ")[1]
 
-    token = authorization.split(" ")[1]
+    # 获取当前用户信息
+    current_user = await get_current_user(token)
+    user_data: User = await User.get(username=current_user["sub"])
 
-    user = await get_current_user(token)
-    user_data: User = await User.get(username=user["sub"])
+    # 并发获取头像和用户服务器数据
+    avatar_task = get_user_avatar_url(user_data)
+    user_servers_task = UserServer.filter(user=user_data)
+    avatar_url, user_servers = await asyncio.gather(avatar_task, user_servers_task)
 
-    avatar_url = await get_user_avatar_url(user_data)
-
-    UserServer_instance: list[UserServer] = await UserServer.filter(user=user_data)
-    servers = [
-        (server.role, (await server.server).id) for server in UserServer_instance
-    ]
+    # 并发获取每个 UserServer 关联的 Server 对象，避免顺序 await 带来的性能损失
+    server_objs = await asyncio.gather(*(us.server for us in user_servers))
+    servers = [(us.role, server.id) for us, server in zip(user_servers, server_objs)]
 
     return UserSchema(
         id=user_data.id,
