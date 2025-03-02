@@ -47,7 +47,7 @@ router = APIRouter()
     },
 )
 async def list_servers(
-    limit: int | None = Query(None, ge=1),  # 查询结果限制，最小为1
+    limit: int = Query(None, ge=1),  # 查询结果限制，最小为1
     offset: int = Query(0, ge=0),  # 查询偏移量，默认从第0个服务器开始
 ):
     """

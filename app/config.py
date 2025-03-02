@@ -18,9 +18,12 @@ class Settings(BaseSettings):
     FROM_EMAIL_PASSWORD: str
     SMTP_SERVER: str
     SMTP_PORT: int
+    MEILI_URL: str
+    MEILI_API_KEY: str
+    MEILI_INDEX: str
 
     class Config:
         env_file = ".env"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore

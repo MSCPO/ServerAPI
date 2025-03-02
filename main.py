@@ -1,28 +1,25 @@
 import asyncio
-import signal
 import uuid
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from tortoise.signals import post_delete, post_save
 
 from app.log import logger
 from app.router.auth import router as auth_router
+from app.router.search import router as search_router
 from app.router.servers import router as serves_router
 from app.router.user import router as user_router
 from app.router.webhook import router as webhook_router
 from app.services.conn.db import disconnect, init_db
+from app.services.conn.meilisearch import init_meilisearch_index
 from app.services.conn.redis import redis_client
+from app.services.search.sync_index import batch_sync_to_meilisearch
 from app.services.servers.GetServerStatus import query_servers_periodically
+from app.services.servers.models import Server
 
-
-async def handle_exit():
-    logger.info("⚠️ 进程即将退出，释放 Redis 锁...")
-    await release_lock()
-
-
-signal.signal(signal.SIGTERM, lambda *args: asyncio.run(handle_exit()))
 REDIS_LOCK_KEY = "query_servers_lock"
 REDIS_LOCK_TTL = 60
 PROCESS_ID = str(uuid.uuid4())
@@ -75,7 +72,8 @@ async def refresh_lock():
 @asynccontextmanager
 async def startup(app: FastAPI):
     await init_db()
-    app.state.task = None  # 任务存储位置
+    await init_meilisearch_index()
+    app.state.task = app.state.lock_task = None
 
     if await acquire_lock():
         logger.success(f"🔐 获取到锁，进程 {PROCESS_ID} 启动任务")
@@ -83,6 +81,10 @@ async def startup(app: FastAPI):
         # 存储任务引用
         app.state.task = asyncio.create_task(query_servers_periodically())
         app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
+
+        await batch_sync_to_meilisearch()
+        post_save(Server)(batch_sync_to_meilisearch)
+        post_delete(Server)(batch_sync_to_meilisearch)
     else:
         logger.warning("⛔ 另一个进程已持有锁，不启动任务")
 
@@ -120,6 +122,6 @@ app.include_router(serves_router, prefix="/v1", tags=["servers"])
 app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
 app.include_router(user_router, prefix="/v1", tags=["user"])
-
+app.include_router(search_router, prefix="/v1", tags=["search"])
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)

@@ -17,7 +17,9 @@ attrs==25.1.0
 bcrypt==4.2.1
 boto3==1.36.1
 botocore==1.36.1
+camel-converter==4.0.1
 certifi==2025.1.31
+charset-normalizer==3.4.1
 click==8.1.8
 dnspython==2.7.0
 email_validator==2.2.0
@@ -39,6 +41,7 @@ markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 mcstatus==11.1.1
 mdurl==0.1.2
+meilisearch==0.34.0
 multidict==6.1.0
 orjson==3.10.15
 passlib==1.7.4
@@ -57,6 +60,7 @@ python-dotenv==1.0.1
 python-multipart==0.0.20
 pytz==2025.1
 PyYAML==6.0.2
+requests==2.32.3
 rich==13.9.4
 rich-toolkit==0.13.2
 s3transfer==0.11.2

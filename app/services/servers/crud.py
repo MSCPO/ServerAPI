@@ -173,8 +173,6 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
         avatar_url = await get_user_avatar_url(user)
         return UserBase(
             id=user.id,
-            username=user.username,
-            email=user.email,
             display_name=user.display_name,
             role=user.role,
             is_active=user.is_active,
