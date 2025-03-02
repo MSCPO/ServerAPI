@@ -54,7 +54,7 @@ async def asentence() -> dict:
 
 
 async def get_token_data(token) -> dict[str, str]:
-    verify_data: bytes = await redis_client.get(f"verify:{token}")
+    verify_data: str = await redis_client.get(f"verify:{token}")
     if verify_data is None:
         raise HTTPException(status_code=404, detail="token 无效")
     data: dict = json.loads(verify_data)

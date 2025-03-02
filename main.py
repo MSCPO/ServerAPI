@@ -1,24 +1,109 @@
 import asyncio
+import signal
+import uuid
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.log import logger
 from app.router.auth import router as auth_router
 from app.router.servers import router as serves_router
 from app.router.user import router as user_router
 from app.router.webhook import router as webhook_router
 from app.services.conn.db import disconnect, init_db
+from app.services.conn.redis import redis_client
 from app.services.servers.GetServerStatus import query_servers_periodically
 
 
+async def handle_exit():
+    logger.info("⚠️ 进程即将退出，释放 Redis 锁...")
+    await release_lock()
+
+
+signal.signal(signal.SIGTERM, lambda *args: asyncio.run(handle_exit()))
+REDIS_LOCK_KEY = "query_servers_lock"
+REDIS_LOCK_TTL = 60
+PROCESS_ID = str(uuid.uuid4())
+
+
+async def acquire_lock() -> bool:
+    """
+    尝试获取 Redis 分布式锁，成功返回 True，失败返回 False。
+    """
+
+    lock_set = await redis_client.set(
+        REDIS_LOCK_KEY, PROCESS_ID, ex=REDIS_LOCK_TTL, nx=True
+    )
+
+    return lock_set is True
+
+
+async def release_lock():
+    """
+    释放 Redis 分布式锁（仅在自己持有时释放）。
+    """
+
+    # 使用 Lua 脚本确保原子性（避免误删别人的锁）
+    lua_script = """
+    if redis.call("GET", KEYS[1]) == ARGV[1] then
+        return redis.call("DEL", KEYS[1])
+    else
+        return 0
+    end
+    """
+    await redis_client.eval(lua_script, 1, REDIS_LOCK_KEY, PROCESS_ID)
+
+
+async def refresh_lock():
+    """
+    定期刷新锁，防止锁过期
+    """
+    while True:
+        await asyncio.sleep(50)  # 每 50 秒续期
+        stored_id: str = await redis_client.get(REDIS_LOCK_KEY)
+
+        if stored_id and stored_id == PROCESS_ID:
+            await redis_client.expire(REDIS_LOCK_KEY, REDIS_LOCK_TTL)
+            logger.success("🔄 锁已续期")
+        else:
+            logger.error("⛔ 续期失败，锁已被其他进程占用")
+            break
+
+
 @asynccontextmanager
-async def startup(_: FastAPI):
-    # 初始化数据库连接
+async def startup(app: FastAPI):
     await init_db()
-    asyncio.create_task(query_servers_periodically())  # noqa: RUF006
+    app.state.task = None  # 任务存储位置
+
+    if await acquire_lock():
+        logger.success(f"🔐 获取到锁，进程 {PROCESS_ID} 启动任务")
+
+        # 存储任务引用
+        app.state.task = asyncio.create_task(query_servers_periodically())
+        app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
+    else:
+        logger.warning("⛔ 另一个进程已持有锁，不启动任务")
+
     yield
+
+    # 进程退出时清理任务
+    if app.state.task:
+        app.state.task.cancel()
+        try:
+            await app.state.task
+        except asyncio.CancelledError:
+            logger.success("✅ 任务已取消")
+
+    if app.state.lock_task:
+        app.state.lock_task.cancel()
+        try:
+            await app.state.lock_task
+        except asyncio.CancelledError:
+            logger.success("✅ 续期任务已取消")
+
+    await release_lock()
     await disconnect()
 
 
@@ -36,6 +121,5 @@ app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
 app.include_router(user_router, prefix="/v1", tags=["user"])
 
-app.include_router
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=1)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)
