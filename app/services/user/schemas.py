@@ -14,8 +14,6 @@ class BanTypeEnum(str, Enum):
 
 class UserBase(BaseModel):
     id: int = Field(..., description="用户的唯一标识符")
-    username: str = Field(..., max_length=32, description="用户的用户名")
-    email: str = Field(..., max_length=100, description="用户的电子邮箱")
     display_name: str = Field(max_length=16, description="用户的显示名称")
     role: RoleEnum = Field(RoleEnum.user, description="用户角色")
     is_active: bool = Field(False, description="用户是否激活")
@@ -40,6 +38,8 @@ class UserUpdate(UserBase):
 
 
 class User(UserBase):
+    username: str = Field(..., max_length=32, description="用户的用户名")
+    email: str = Field(..., max_length=100, description="用户的电子邮箱")
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
     last_login_ip: str | None = Field(
