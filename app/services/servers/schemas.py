@@ -38,19 +38,6 @@ class GetServer(BaseModel):
         from_attributes = True
 
 
-class GetServerShowAPI(BaseModel):
-    server_list: list[GetServer] = Field(
-        ..., title="服务器列表", description="显示所有的服务器列表"
-    )
-    total_member: int = Field(
-        ..., title="会员服务器总数", description="当前会员服务器的总数"
-    )
-    total: int = Field(..., title="服务器总数", description="当前所有服务器的总数")
-
-    class Config:
-        from_attributes = True
-
-
 class GetServerIdShowAPI(GetServer):
     ip: None | str = Field(
         None, title="服务器IP", description="服务器的IP地址，若隐藏则为None"
@@ -78,13 +65,26 @@ class GetServerIdShowAPI(GetServer):
         description="服务器是否处于隐藏状态，隐藏时部分信息不显示",
     )
     status: GetServerStatusAPI | None = Field(
-        ..., title="服务器状态", description="显示服务器的在线状态信息"
+        None, title="服务器状态", description="显示服务器的在线状态信息"
     )
     permission: str = Field(
         ...,
         title="服务器权限",
         description="服务器的权限",
     )
+
+    class Config:
+        from_attributes = True
+
+
+class GetServerShowAPI(BaseModel):
+    server_list: list[GetServerIdShowAPI] = Field(
+        ..., title="服务器列表", description="显示所有的服务器列表"
+    )
+    total_member: int = Field(
+        ..., title="会员服务器总数", description="当前会员服务器的总数"
+    )
+    total: int = Field(..., title="服务器总数", description="当前所有服务器的总数")
 
     class Config:
         from_attributes = True

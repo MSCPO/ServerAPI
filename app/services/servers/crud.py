@@ -7,7 +7,6 @@ from app.services.servers.models import (
     ServerStatus,
 )
 from app.services.servers.schemas import (
-    GetServer,
     GetServerIdShowAPI,
     GetServerManagers,
     GetServerShowAPI,
@@ -19,20 +18,25 @@ from app.services.user.models import UserServer
 from app.services.user.utils import get_user_avatar_url
 
 
-async def GetServers(limit: int | None = None, offset: int = 0) -> GetServerShowAPI:
-    # 利用数据库 count() 查询总数，避免加载所有数据到内存中
+async def GetServers(
+    limit: int | None = None, offset: int = 0, user: int | None = None
+) -> GetServerShowAPI:
+    # 并发查询服务器总数和成员数
     total_servers, total_member = await asyncio.gather(
         Server.all().count(), Server.filter(is_member=True).count()
     )
 
-    # 构建分页查询
+    # 构建查询
     query = Server.all().offset(offset)
     if limit is not None:
         query = query.limit(limit)
     server_query = await query
 
-    # 转换数据（假设 model_validate 为数据转换方法）
-    server_list = [GetServer.model_validate(server) for server in server_query]
+    # 并发调用每个服务器的详情查询
+    tasks = [GetServer_by_id(server.id, user) for server in server_query]
+    server_info_list = await asyncio.gather(*tasks)
+    # 过滤掉返回 None 的情况
+    server_list = [info for info in server_info_list if info is not None]
 
     return GetServerShowAPI(
         server_list=server_list, total_member=total_member, total=total_servers
@@ -42,12 +46,12 @@ async def GetServers(limit: int | None = None, offset: int = 0) -> GetServerShow
 async def GetServer_by_id(
     server_id: int, user: int | None
 ) -> None | GetServerIdShowAPI:
-    # 首先查询服务器，如果不存在则直接返回 None
+    # 查询服务器是否存在，不存在直接返回 None
     server = await Server.get_or_none(id=server_id)
     if not server:
         return None
 
-    # 并发查询服务器状态和用户在该服务器中的权限（user_server）
+    # 并发查询服务器状态和用户权限（user_server）
     server_status_task = ServerStatus.get_or_none(server=server)
     user_server_task = (
         UserServer.get_or_none(user=user, server=server_id)
@@ -58,10 +62,8 @@ async def GetServer_by_id(
         server_status_task, user_server_task
     )
 
-    # 用户权限，如果不存在对应记录，默认为 "guest"
     permission = user_server.role if user_server else "guest"
 
-    # 构造服务器状态数据，如果存在状态数据
     status_data = None
     if server_status and server_status.stat_data:
         stat_data = server_status.stat_data

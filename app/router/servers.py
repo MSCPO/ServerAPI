@@ -27,28 +27,19 @@ router = APIRouter()
     responses={
         200: {
             "description": "成功获取服务器列表",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "servers": [
-                            {"id": 1, "name": "Server 1"},
-                            {"id": 2, "name": "Server 2"},
-                        ]
-                    }
-                }
-            },
         },
         400: {
             "description": "无效的请求参数",
             "content": {
-                "application/json": {"example": {"detail": "limit should be >= 1"}}
+                "application/json": {"example": {"detail": "limit 不能超过 50"}}
             },
         },
     },
 )
 async def list_servers(
-    limit: int = Query(None, ge=1),  # 查询结果限制，最小为1
-    offset: int = Query(0, ge=0),  # 查询偏移量，默认从第0个服务器开始
+    request: Request,
+    limit: int = Query(None, ge=1),
+    offset: int = Query(0, ge=0),
 ):
     """
     获取服务器列表。
@@ -58,7 +49,19 @@ async def list_servers(
 
     返回值为服务器列表，包含基本的服务器信息。
     """
-    return await GetServers(limit=limit, offset=offset)
+    if limit is not None and limit > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="limit 不能超过 50"
+        )
+    authorization: str | None = request.headers.get("Authorization")
+
+    if authorization is None:
+        current_user = None
+    elif authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        current_user = await get_current_user(token)
+    user = current_user.get("id") if current_user else None
+    return await GetServers(limit=limit, offset=offset, user=user)
 
 
 # 获取服务器的具体信息
