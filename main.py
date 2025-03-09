@@ -9,6 +9,7 @@ from tortoise.signals import post_delete, post_save
 
 from app.log import logger
 from app.router.auth import router as auth_router
+from app.router.report import router as report_router
 from app.router.search import router as search_router
 from app.router.servers import router as serves_router
 from app.router.user import router as user_router
@@ -123,5 +124,7 @@ app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
 app.include_router(user_router, prefix="/v1", tags=["user"])
 app.include_router(search_router, prefix="/v1", tags=["search"])
+app.include_router(report_router, prefix="/v1", tags=["report"])
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)

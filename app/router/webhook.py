@@ -4,7 +4,6 @@ import hmac
 import os
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
 
 from app.config import settings
 from app.log import logger
@@ -48,24 +47,18 @@ async def run_git_pull_and_restart():
         stdout, stderr = await process.communicate()
 
         if process.returncode == 0:
-            logger.info(f"Git 重置成功: {stdout.decode()}")
+            logger.info(f"Git 重置成功：{stdout.decode()}")
             os._exit(0)
         else:
-            logger.error(f"Git 重置失败: {stderr.decode()}")
+            logger.error(f"Git 重置失败：{stderr.decode()}")
     else:
         logger.error(f"Git pull error: {stderr.decode()}")
-
-
-class WebhookResponse(BaseModel):
-    message: str
-    status: str
 
 
 @router.post(
     "/webhook",
     summary="GitHub Webhook",
-    response_model=WebhookResponse,
-    tags=["webhook"],
+    response_model=dict[str, str],
     responses={200: {"description": "Success"}},
     include_in_schema=False,
 )
@@ -118,4 +111,4 @@ async def handle_webhook(request: Request):
     if payload.get("ref") == "refs/heads/main" and event.lower() == "push":
         await run_git_pull_and_restart()
 
-    return {"status": "success"}
+    return {"detail": "success"}

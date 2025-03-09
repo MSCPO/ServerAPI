@@ -44,8 +44,8 @@ async def list_servers(
     """
     获取服务器列表。
 
-    - `limit`: 返回的服务器数量，默认为空，传入1及以上的值。
-    - `offset`: 查询的起始位置，默认为0。
+    - `limit`: 返回的服务器数量，默认为空，传入 1 及以上的值。
+    - `offset`: 查询的起始位置，默认为 0。
 
     返回值为服务器列表，包含基本的服务器信息。
     """
@@ -91,10 +91,10 @@ async def list_servers(
                             "delay": 59.96639499971934,
                             "version": "1.21.60",
                             "motd": {
-                                "plain": "服务器名称2",
-                                "html": "<p>服务器名称2</p>",
-                                "minecraft": "服务器名称2",
-                                "ansi": "\u001b[0m服务器名称2\u001b[0m",
+                                "plain": "服务器名称 2",
+                                "html": "<p>服务器名称 2</p>",
+                                "minecraft": "服务器名称 2",
+                                "ansi": "\u001b[0m 服务器名称 2\u001b[0m",
                             },
                             "icon": None,
                         },
@@ -110,11 +110,11 @@ async def list_servers(
 )
 async def get_server(server_id: int, request: Request):
     """
-    获取指定ID服务器的详细信息。
+    获取指定 ID 服务器的详细信息。
 
     - `server_id`: 服务器的唯一标识符。
 
-    返回指定服务器的详细信息，如无法找到该服务器，则返回404。
+    返回指定服务器的详细信息，如无法找到该服务器，则返回 404。
     """
     authorization: str | None = request.headers.get("Authorization")
 
@@ -158,10 +158,10 @@ async def get_server(server_id: int, request: Request):
                             "delay": 59.96639499971934,
                             "version": "1.21.60",
                             "motd": {
-                                "plain": "服务器名称2",
-                                "html": "<p>服务器名称2</p>",
-                                "minecraft": "服务器名称2",
-                                "ansi": "\u001b[0m服务器名称2\u001b[0m",
+                                "plain": "服务器名称 2",
+                                "html": "<p>服务器名称 2</p>",
+                                "minecraft": "服务器名称 2",
+                                "ansi": "\u001b[0m 服务器名称 2\u001b[0m",
                             },
                             "icon": None,
                         },
@@ -183,12 +183,12 @@ async def get_server_editor(
     server_id: int, current_user: dict = Depends(get_current_user)
 ):
     """
-    获取指定ID服务器的详细信息（编辑者）。
+    获取指定 ID 服务器的详细信息（编辑者）。
 
     - `server_id`: 服务器的唯一标识符。
     - `current_user`: 当前登录的用户信息。
 
-    返回指定服务器的详细信息，如无法找到该服务器，则返回404。
+    返回指定服务器的详细信息，如无法找到该服务器，则返回 404。
     """
     if server := await GetServer_by_id_editor(server_id, current_user):
         return server
@@ -210,9 +210,9 @@ async def get_server_editor(
                 "application/json": {
                     "examples": {
                         "更新字段不能为空": {"detail": "更新字段不能为空"},
-                        "tags 数量不能超过7个": {"detail": "tags 数量不能超过7个"},
-                        "tags 长度限制为1~4": {"detail": "tags 长度限制为1~4"},
-                        "简介必须大于100字": {"detail": "简介必须大于100字"},
+                        "tags 数量不能超过 7 个": {"detail": "tags 数量不能超过 7 个"},
+                        "tags 长度限制为 1~4": {"detail": "tags 长度限制为 1~4"},
+                        "简介必须大于 100 字": {"detail": "简介必须大于 100 字"},
                     }
                 }
             },
@@ -229,7 +229,7 @@ async def update_server(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    更新指定ID服务器的详细信息（编辑者）。
+    更新指定 ID 服务器的详细信息（编辑者）。
 
     - `server_id`: 服务器的唯一标识符。
     - `update_data`: 需要更新的服务器数据。
@@ -256,21 +256,21 @@ async def update_server(
             status_code=status.HTTP_400_BAD_REQUEST, detail="更新字段不能为空"
         )
 
-    # tags 数量限制（6个）, 且每个tag长度限制（1~4）
+    # tags 数量限制（6 个）, 且每个 tag 长度限制（1~4）
     if len(update_data.tags) > 6:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过7个"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过 7 个"
         )
     for tag in update_data.tags:
         if not 1 <= len(tag) <= 4:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="tags 长度限制为1~4"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="tags 长度限制为 1~4"
             )
 
-    # 简介必须大于100字
+    # 简介必须大于 100 字
     if len(update_data.desc) < 100:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="简介必须大于100字"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="简介必须大于 100 字"
         )
 
     # IP 是否有效
@@ -278,7 +278,7 @@ async def update_server(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="服务器 IP 无效"
         )
-    # version 不超过25个字符
+    # version 不超过 25 个字符
     if len(update_data.version) > 20:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="版本不能超过 20 字"
@@ -326,10 +326,10 @@ async def update_server(
 )
 async def get_server_managers(server_id: int):
     """
-    获取指定ID服务器的所有管理人员。
+    获取指定 ID 服务器的所有管理人员。
 
     - `server_id`: 服务器的唯一标识符。
 
-    返回指定服务器的所有管理人员，如无法找到该服务器，则返回404。
+    返回指定服务器的所有管理人员，如无法找到该服务器，则返回 404。
     """
     return await GetServerOwners_by_id(server_id)
