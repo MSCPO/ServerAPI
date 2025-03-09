@@ -4,12 +4,14 @@ from app.services.user.schemas import UserBase
 
 
 class Motd(BaseModel):
-    plain: str = Field(..., title="纯文本MOTD", description="显示服务器的纯文本MOTD")
-    html: str = Field(..., title="HTML格式MOTD", description="显示服务器的HTML格式MOTD")
-    minecraft: str = Field(
-        ..., title="Minecraft格式MOTD", description="显示Minecraft格式的MOTD"
+    plain: str = Field(..., title="纯文本 MOTD", description="显示服务器的纯文本 MOTD")
+    html: str = Field(
+        ..., title="HTML 格式 MOTD", description="显示服务器的 HTML 格式 MOTD"
     )
-    ansi: str = Field(..., title="ANSI格式MOTD", description="显示ANSI格式的MOTD")
+    minecraft: str = Field(
+        ..., title="Minecraft 格式 MOTD", description="显示 Minecraft 格式的 MOTD"
+    )
+    ansi: str = Field(..., title="ANSI 格式 MOTD", description="显示 ANSI 格式的 MOTD")
 
     class Config:
         from_attributes = True
@@ -21,9 +23,9 @@ class GetServerStatusAPI(BaseModel):
     )
     delay: float = Field(..., title="延迟", description="服务器的延迟时间")
     version: str = Field(..., title="版本", description="服务器的软件版本")
-    motd: Motd = Field(..., title="MOTD", description="服务器的MOTD信息")
+    motd: Motd = Field(..., title="MOTD", description="服务器的 MOTD 信息")
     icon: None | str = Field(
-        None, title="服务器图标", description="服务器的图标，若无则为None"
+        None, title="服务器图标", description="服务器的图标，若无则为 None"
     )
 
     class Config:
@@ -31,7 +33,7 @@ class GetServerStatusAPI(BaseModel):
 
 
 class GetServer(BaseModel):
-    id: int = Field(..., title="服务器ID", description="服务器的唯一标识符")
+    id: int = Field(..., title="服务器 ID", description="服务器的唯一标识符")
     name: str = Field(..., title="服务器名称", description="服务器的名称")
 
     class Config:
@@ -40,12 +42,12 @@ class GetServer(BaseModel):
 
 class GetServerIdShowAPI(GetServer):
     ip: None | str = Field(
-        None, title="服务器IP", description="服务器的IP地址，若隐藏则为None"
+        None, title="服务器 IP", description="服务器的 IP 地址，若隐藏则为 None"
     )
     type: str = Field(
         ...,
         title="服务器类型",
-        description="服务器所属的类型（例如：Minecraft、World of Warcraft等）",
+        description="服务器所属的类型（例如：Minecraft、World of Warcraft 等）",
     )
     version: str = Field(..., title="服务器版本", description="服务器运行的版本")
     desc: str = Field(..., title="服务器描述", description="对服务器的简短描述")
@@ -57,7 +59,7 @@ class GetServerIdShowAPI(GetServer):
     tags: list = Field(
         ...,
         title="服务器标签",
-        description="与服务器相关的标签（如：生存、创造、PVP等）",
+        description="与服务器相关的标签（如：生存、创造、PVP 等）",
     )
     is_hide: bool = Field(
         ...,
@@ -92,12 +94,12 @@ class GetServerShowAPI(BaseModel):
 
 class UpdateServerRequest(BaseModel):
     name: str = Field(..., title="服务器名称", description="服务器的名称")
-    ip: str = Field(..., title="服务器IP", description="服务器的IP地址")
+    ip: str = Field(..., title="服务器 IP", description="服务器的 IP 地址")
     desc: str = Field(..., title="服务器描述", description="对服务器的简短描述")
     tags: list[str] = Field(
         ...,
         title="服务器标签",
-        description="与服务器相关的标签（如：生存、创造、PVP等）",
+        description="与服务器相关的标签（如：生存、创造、PVP 等）",
     )
     version: str = Field(..., title="服务器版本", description="服务器运行的版本")
     link: str = Field(..., title="服务器链接", description="指向服务器详情的链接")
