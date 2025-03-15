@@ -75,7 +75,7 @@ async def send_verification_email(to_email: str, token: str):
     password = settings.FROM_EMAIL_PASSWORD
 
     msg = MIMEMultipart()
-    msg["From"] = formataddr(pair=("MSCPO验证系统", "support@tblstudio.cn"))
+    msg["From"] = formataddr(pair=("MSCPO 验证系统", "support@crashvibe.cn"))
     msg["To"] = to_email
     msg["Subject"] = "[MSCPO] 登陆系统验证"
     asentence_data = await asentence()
@@ -111,7 +111,7 @@ async def _send_email(
 
 
 def validate_username(username: str) -> bool:
-    """用户名认证(4-16 位中文、字毮、数字、下划线、减号)"""
+    """用户名认证 (4-16 位中文、字毮、数字、下划线、减号)"""
     if len(username) < 4 or len(username) > 16:
         return False
     return bool(re.match(r"[\u4e00-\u9fa5\w-]+", username))
