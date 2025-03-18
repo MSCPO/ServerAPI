@@ -1,7 +1,8 @@
 import asyncio
 
-from fastapi import HTTPException, status
+from fastapi import Depends, HTTPException, status
 
+from app.services.auth.schemas import jwt_data
 from app.services.servers.models import (
     Server,
     ServerStatus,
@@ -14,6 +15,7 @@ from app.services.servers.schemas import (
     Motd,
     UserBase,
 )
+from app.services.user.crud import get_current_user
 from app.services.user.models import UserServer
 from app.services.user.utils import get_user_avatar_url
 
@@ -98,14 +100,14 @@ async def GetServer_by_id(
 
 
 async def GetServer_by_id_editor(
-    server_id: int, current_user: dict
+    server_id: int, current_user: jwt_data = Depends(get_current_user)
 ) -> GetServerIdShowAPI | None:
     """查看服务器详细信息（详细信息）"""
 
     # 并发查询服务器和当前用户在该服务器中的角色
     server, user_server = await asyncio.gather(
         Server.get_or_none(id=server_id),
-        UserServer.get_or_none(user=current_user["id"], server=server_id),
+        UserServer.get_or_none(user=current_user.id, server=server_id),
     )
 
     if not user_server:

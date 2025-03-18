@@ -9,7 +9,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> jwt_data:
-    payload: jwt_data = jwt_data.model_validate(verify_token(token))
+    payload: jwt_data = jwt_data.model_validate(await verify_token(token))
 
     user = await User.get_or_none(username=payload.sub)
     if user is None:
