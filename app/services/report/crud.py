@@ -1,6 +1,8 @@
-from .models import Ticket, TicketLog, TicketPriority, TicketStatus, TicketType
-from pydantic import BaseModel, Field
 from tortoise.exceptions import DoesNotExist
+
+from app.services.report.schemas import TicketCreateReport
+
+from .models import Ticket, TicketLog, TicketStatus
 
 
 class TicketCRUD:
@@ -31,7 +33,9 @@ class TicketCRUD:
         return ticket
 
     @staticmethod
-    async def create_report_ticket(ticket_data: dict, changed_by_id: int) -> Ticket:
+    async def create_report_ticket(
+        ticket_data: TicketCreateReport, changed_by_id: int
+    ) -> Ticket:
         """
         创建一个举报类型的工单，并记录状态变更日志
 
@@ -39,12 +43,8 @@ class TicketCRUD:
         :param changed_by_id: 操作人 ID，用于记录在日志中
         :return: 创建的举报工单实例
         """
-        # 强制设置工单类型为举报（REPORT）
-        ticket_data["type"] = TicketType.REPORT
-        ticket_data["status"] = TicketStatus.PENDING  # 默认状态是待处理
-
         # 创建举报工单
-        ticket: Ticket = await Ticket.create(**ticket_data)
+        ticket: Ticket = await Ticket.create(**ticket_data.model_dump())
 
         # 如果举报工单的状态不是默认的待处理状态，则记录日志
         if ticket.status != TicketStatus.PENDING:
@@ -132,21 +132,3 @@ class TicketCRUD:
 
 
 # 用 Pydantic 模型来验证请求体数据
-class TicketCreateReport(BaseModel):
-    title: str = Field(..., title="工单标题", description="工单的简短描述")
-    description: str | None = Field(
-        None, title="工单描述", description="工单的详细描述，可以为空"
-    )
-    creator_id: int = Field(..., title="创建者 ID", description="提交举报工单的用户 ID")
-    reported_user_id: int = Field(
-        ..., title="被举报用户 ID", description="举报的目标用户 ID"
-    )
-    reported_content_id: int | None = Field(
-        None, title="被举报内容 ID", description="举报的内容 ID，可选"
-    )
-    report_reason: str = Field(..., title="举报理由", description="举报的具体原因")
-    priority: TicketPriority | None = Field(
-        TicketPriority.MEDIUM,
-        title="优先级",
-        description="工单的优先级，1=低，2=中，3=高。默认中等优先级",
-    )

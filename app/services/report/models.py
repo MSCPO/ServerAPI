@@ -92,7 +92,7 @@ class Ticket(Model):
     created_at = fields.DatetimeField(auto_now_add=True)  # 创建时间
     updated_at = fields.DatetimeField(auto_now=True)  # 更新时间
 
-    class Meta:
+    class TicketMeta:
         table = "ticket"  # 数据表名
 
 
@@ -113,5 +113,5 @@ class TicketLog(Model):
     )  # 操作人
     changed_at = fields.DatetimeField(auto_now_add=True)  # 变更时间
 
-    class Meta:
+    class TicketLogMeta:
         table = "ticket_log"  # 数据表名

@@ -1,4 +1,9 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from pydantic import BaseModel, Field
+
+from app.config import settings
 
 
 class captchaResponse(BaseModel):
@@ -30,5 +35,21 @@ class RegisterRequest(captchaResponse):
     token: str = Field(
         ...,
         title="Token",
-        description="用户的注册token",
+        description="用户的注册 token",
+    )
+
+
+class Auth_Token(BaseModel):
+    access_token: str = Field(..., title="访问令牌", description="JWT 访问令牌")
+    token_type: str = Field("bearer", title="令牌类型", description="令牌类型")
+
+
+class jwt_data(BaseModel):
+    sub: str = Field(..., title="用户名", description="JWT 中的用户名")  # 用户名
+    id: int = Field(..., title="用户 ID", description="JWT 中的用户 ID")  # 用户 ID
+    exp: datetime = Field(
+        default=datetime.now(ZoneInfo("Asia/Shanghai"))
+        + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        title="过期时间",
+        description="JWT 的过期时间",
     )

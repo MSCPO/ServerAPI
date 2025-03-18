@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from app.services.auth.schemas import jwt_data
 from app.services.servers.crud import (
     GetServer_by_id,
     GetServer_by_id_editor,
@@ -54,13 +55,11 @@ async def list_servers(
             status_code=status.HTTP_400_BAD_REQUEST, detail="limit 不能超过 50"
         )
     authorization: str | None = request.headers.get("Authorization")
-
-    if authorization is None:
-        current_user = None
-    elif authorization.startswith("Bearer "):
+    current_user: jwt_data | None = None
+    if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
         current_user = await get_current_user(token)
-    user = current_user.get("id") if current_user else None
+    user = current_user.id if current_user else None
     return await GetServers(limit=limit, offset=offset, user=user)
 
 
@@ -118,12 +117,12 @@ async def get_server(server_id: int, request: Request):
     """
     authorization: str | None = request.headers.get("Authorization")
 
-    if authorization is None:
-        current_user = None
-    elif authorization.startswith("Bearer "):
+    current_user: jwt_data | None = None
+
+    if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
         current_user = await get_current_user(token)
-    user = current_user.get("id") if current_user else None
+    user = current_user.id if current_user else None
     server = await GetServer_by_id(server_id, user)
     if server is None:
         raise HTTPException(

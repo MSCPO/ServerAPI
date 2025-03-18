@@ -1,7 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.services.report.crud import TicketCreateReport, TicketCRUD
-from app.services.report.models import TicketStatus, TicketType
+from app.services.auth.schemas import jwt_data
+from app.services.report.crud import TicketCRUD
+from app.services.report.schemas import TicketCreateReport
+from app.services.user.crud import get_current_user
 
 router = APIRouter()
 
@@ -39,33 +41,8 @@ router = APIRouter()
         },
     },
 )
-async def create_report(ticket: TicketCreateReport):
-    """
-    创建举报工单接口
-
-    **请求体字段说明：**
-    - `title`: 工单标题，字符串类型，最大长度 255 字符
-    - `description`: 工单描述，可选，最长 1000 字符
-    - `creator_id`: 提交工单的用户 ID
-    - `reported_user_id`: 被举报用户的 ID
-    - `reported_content_id`: 被举报内容的 ID（如果有的话）
-    - `report_reason`: 举报理由，字符串类型，不能为空
-    - `priority`: 工单的优先级，取值为 1、2、3，分别表示低、中、高，默认为中等优先级
-
-    **返回说明：**
-    - 返回创建的举报工单数据，包括 `id`, `status`, `creator_id`, `created_at` 等字段。
-
-    - **成功响应代码**: `201 Created`
-    - **失败响应代码**: `400 Bad Request`（如果请求体字段不完整）
-
-    :param ticket: 创建举报工单所需的字段
-    :return: 返回创建的举报工单数据
-    """
-    ticket_data = ticket.model_dump()
-    ticket_data["creator_id"] = (
-        ticket.creator_id
-    )  # 创建工单时，creator_id 为提交者的 ID
-    ticket_data["status"] = TicketStatus.PENDING  # 默认设置为待处理
-    ticket_data["type"] = TicketType.REPORT  # 设置为举报工单类型
-
-    return await TicketCRUD.create_report_ticket(ticket_data, ticket.creator_id)
+async def create_report(
+    ticket: TicketCreateReport, current_user: jwt_data = Depends(get_current_user)
+):
+    ticket.creator_id = current_user.id
+    return await TicketCRUD.create_report_ticket(ticket, ticket.creator_id)

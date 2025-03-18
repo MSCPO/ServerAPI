@@ -2,27 +2,16 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.services.auth.auth import verify_token
+from app.services.auth.schemas import jwt_data
 from app.services.user.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    payload = await verify_token(token)
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if "sub" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> jwt_data:
+    payload: jwt_data = jwt_data.model_validate(verify_token(token))
 
-    user = await User.get_or_none(username=payload["sub"])
+    user = await User.get_or_none(username=payload.sub)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

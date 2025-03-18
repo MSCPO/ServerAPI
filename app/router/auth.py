@@ -23,7 +23,13 @@ from app.services.auth.crud import (
     update_last_login,
     verify_recaptcha,
 )
-from app.services.auth.schemas import RegisterRequest, UserLogin, captchaResponse
+from app.services.auth.schemas import (
+    Auth_Token,
+    RegisterRequest,
+    UserLogin,
+    captchaResponse,
+    jwt_data,
+)
 from app.services.conn.redis import redis_client
 from app.services.user.crud import get_current_user
 from app.services.user.models import User
@@ -37,12 +43,6 @@ from app.services.utils import (
     validate_username,
     verify_password,
 )
-
-
-class Auth_Token(BaseModel):
-    access_token: str = Field(..., title="访问令牌", description="JWT 访问令牌")
-    token_type: str = Field("bearer", title="令牌类型", description="令牌类型")
-
 
 router = APIRouter()
 
@@ -115,7 +115,9 @@ async def login(user: UserLogin, request: Request):
         await update_last_login(db_user, client_ip)
 
     # 创建并返回 JWT token
-    access_token = create_access_token(data={"sub": db_user.username, "id": db_user.id})
+    access_token = create_access_token(
+        data=jwt_data(sub=db_user.username, id=db_user.id)
+    )
     return Auth_Token.model_validate(
         {"access_token": access_token, "token_type": "bearer"}
     )
@@ -132,7 +134,7 @@ class ReturnResponse(BaseModel):
 
 
 class ReturnResponse_Register(ReturnResponse):
-    user_id: int = Field(..., title="用户ID", description="用户ID")
+    user_id: int = Field(..., title="用户 ID", description="用户 ID")
 
 
 class Email_Register(captchaResponse):
@@ -186,7 +188,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
         )
 
     token = generate_token()
-    # 检擦token是否有重复
+    # 检擦 token 是否有重复
     while await redis_client.get(f"verify:{token}"):
         token = generate_token()
 
@@ -247,7 +249,7 @@ from app.log import logger
                 "application/json": {
                     "examples": {
                         "密码无效": {
-                            "detail": "密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符"
+                            "detail": "密码必须至少 8 个字符，并包含至少一个数字、一个大写字母和一个特殊字符"
                         },
                         "显示名称无效": {
                             "detail": "显示名称必须 (4-16 位中文、字毮、数字、下划线、减号)"
@@ -269,7 +271,7 @@ from app.log import logger
         422: {
             "description": "reCAPTCHA 验证失败",
             "content": {
-                "application/json": {"example": {"detail": "无效的reCAPTCHA响应"}}
+                "application/json": {"example": {"detail": "无效的 reCAPTCHA 响应"}}
             },
         },
         404: {
@@ -299,17 +301,17 @@ async def register(
     if not await verify_recaptcha(register_data.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="无效的reCAPTCHA响应",
+            detail="无效的 reCAPTCHA 响应",
         )
 
     # 验证密码强度
     if not validate_password(register_data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="密码必须至少8个字符，并包含至少一个数字、一个大写字母和一个特殊字符",
+            detail="密码必须至少 8 个字符，并包含至少一个数字、一个大写字母和一个特殊字符",
         )
 
-    # 验证Token
+    # 验证 Token
     verify_data = await get_token_data(register_data.token)
     if verify_data is None:
         raise HTTPException(
@@ -459,7 +461,7 @@ async def logout(request: Request):
     """
     注销当前用户，使 JWT token 失效
     """
-    # 使用redis黑名单
+    # 使用 redis 黑名单
 
     token = request.headers.get("Authorization")
     if token is None or not token.startswith("Bearer "):
