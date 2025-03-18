@@ -35,7 +35,7 @@ class Server(Model):
     )
     tags = fields.JSONField(default=list)
 
-    class ServerMeta:
+    class Meta:
         table = "server"
 
 
@@ -44,5 +44,5 @@ class ServerStatus(Model):
     timestamp = fields.DatetimeField(auto_now_add=True)
     stat_data = fields.JSONField(default=dict, null=True)  # 用于存储查询结果
 
-    class ServerStatsMeta:
+    class Meta:
         table = "server_stats"

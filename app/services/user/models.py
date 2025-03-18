@@ -35,7 +35,7 @@ class BanRecord(Model):
     started_at = fields.DatetimeField(auto_now_add=True)  # 封禁开始时间
     ended_at = fields.DatetimeField(null=True)
 
-    class BanRecordMeta:
+    class Meta:
         table = "ban_records"
 
 
@@ -54,7 +54,7 @@ class User(Model):
     last_login = fields.DatetimeField(null=True)
     last_login_ip = fields.CharField(max_length=15, null=True)
 
-    class UserMeta:
+    class Meta:
         table = "users"
 
 
@@ -67,5 +67,5 @@ class UserServer(Model):
     )
     role: SerRoleEnum = fields.CharEnumField(max_length=50, enum_type=SerRoleEnum)
 
-    class UserServerMeta:
+    class Meta:
         table = "user_server"

@@ -98,7 +98,6 @@ async def login(user: UserLogin, request: Request):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
         )
-    # 检测是否为邮箱登录
     if "@" in user.username_or_email:
         db_user = await User.get_or_none(email=user.username_or_email)
     else:

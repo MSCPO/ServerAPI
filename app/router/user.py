@@ -43,7 +43,7 @@ async def get_me(request: Request):
 
     # 获取当前用户信息
     current_user = await get_current_user(token)
-    user_data: User = await User.get(username=current_user.sub)
+    user_data: User = await User.get(id=current_user.id)
 
     # 并发获取头像和用户服务器数据
     avatar_task = get_user_avatar_url(user_data)
