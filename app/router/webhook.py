@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import os
+import signal
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -48,7 +49,8 @@ async def run_git_pull_and_restart():
 
         if process.returncode == 0:
             logger.info(f"Git 重置成功：{stdout.decode()}")
-            os._exit(0)
+            master_pid = os.getppid()
+            os.kill(master_pid, signal.SIGTERM)
         else:
             logger.error(f"Git 重置失败：{stderr.decode()}")
     else:
