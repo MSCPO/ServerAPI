@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from app.services.user.crud import get_current_user
 from app.services.user.models import User, UserServer
-from app.services.user.schemas import User as UserSchema
+from app.services.user.schemas import User as UserSchema, UserPublicInfo
 from app.services.user.utils import get_user_avatar_url
 
 router = APIRouter()
@@ -65,5 +65,42 @@ async def get_me(request: Request):
         last_login=user_data.last_login,
         last_login_ip=user_data.last_login_ip,
         avatar_url=avatar_url,
+        servers=servers,
+    )
+
+
+@router.get(
+    "/user/{user_id}/public",
+    response_model=UserPublicInfo,
+    summary="获取用户公开信息",
+    description="根据用户 ID 获取用户的公开基本信息，无需鉴权。",
+    responses={
+        200: {"description": "成功返回用户公开信息"},
+        404: {"description": "未找到指定用户"},
+    },
+)
+async def get_user_public_info(user_id: int):
+    # 查询用户是否存在
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+
+    # 并发获取头像和用户服务器数据
+    avatar_task = get_user_avatar_url(user)
+    user_servers_task = UserServer.filter(user=user).prefetch_related("server").all()
+    avatar_url, user_servers = await asyncio.gather(avatar_task, user_servers_task)
+
+    # 处理服务器列表
+    servers = [(us.role, us.server.id) for us in user_servers]
+
+    # 构建并返回公开信息模型
+    return UserPublicInfo(
+        id=user.id,
+        display_name=user.display_name,
+        role=user.role,
+        is_active=user.is_active,
+        avatar_url=avatar_url,
+        created_at=user.created_at,
+        last_login=user.last_login,
         servers=servers,
     )

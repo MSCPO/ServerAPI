@@ -17,7 +17,7 @@ class UserBase(BaseModel):
     display_name: str = Field(max_length=16, description="用户的显示名称")
     role: RoleEnum = Field(RoleEnum.user, description="用户角色")
     is_active: bool = Field(False, description="用户是否激活")
-    avatar_url: str | None = Field(None, description="用户的头像URL")
+    avatar_url: str | None = Field(None, description="用户的头像 URL")
 
     class Config:
         from_attributes = True
@@ -43,8 +43,24 @@ class User(UserBase):
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
     last_login_ip: str | None = Field(
-        None, max_length=15, description="用户最后登录IP地址"
+        None, max_length=15, description="用户最后登录 IP 地址"
     )
+    servers: list[tuple[SerRoleEnum, int]] = Field(
+        [], description="用户拥有的服务器 ID 列表"
+    )
+
+    class Config:
+        from_attributes = True
+
+
+class UserPublicInfo(BaseModel):
+    id: int = Field(..., description="用户的唯一标识符")
+    display_name: str = Field(max_length=16, description="用户的显示名称")
+    role: RoleEnum = Field(RoleEnum.user, description="用户角色")
+    is_active: bool = Field(False, description="用户是否激活")
+    avatar_url: str | None = Field(None, description="用户的头像 URL")
+    created_at: datetime = Field(..., description="用户创建时间")
+    last_login: datetime | None = Field(None, description="用户最后登录时间")
     servers: list[tuple[SerRoleEnum, int]] = Field(
         [], description="用户拥有的服务器 ID 列表"
     )
@@ -65,7 +81,7 @@ class BanRecordBase(BaseModel):
 
 class BanRecord(BanRecordBase):
     id: int = Field(..., description="封禁记录的唯一标识符")
-    user_id: int = Field(..., description="封禁记录对应的用户ID")
+    user_id: int = Field(..., description="封禁记录对应的用户 ID")
 
     class Config:
         from_attributes = True
