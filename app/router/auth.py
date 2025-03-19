@@ -281,7 +281,14 @@ from app.log import logger
         },
         409: {
             "description": "Token 未验证",
-            "content": {"application/json": {"Token 未验证": {"detail": "未被验证"}}},
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "Token 未验证": {"detail": "Token 未被验证"},
+                        "邮箱已存在": {"detail": "邮箱已存在"},
+                    }
+                }
+            },
         },
         500: {
             "description": "服务器内部错误",
@@ -320,6 +327,9 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Token 未被验证"
         )
+    # 检查数据库中是否存在该邮箱
+    if await User.get_or_none(email=verify_data["email"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
 
     # 验证用户名是否唯一
     if not validate_username(register_data.display_name):
