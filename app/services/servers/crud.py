@@ -16,7 +16,7 @@ from app.services.servers.schemas import (
     UserBase,
 )
 from app.services.user.crud import get_current_user
-from app.services.user.models import UserServer
+from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
 from app.services.user.utils import get_user_avatar_url
 
 
@@ -60,12 +60,16 @@ async def GetServer_by_id(
         if user
         else asyncio.sleep(0, result=None)
     )
-    server_status, user_server = await asyncio.gather(
-        server_status_task, user_server_task
+    user_info_task = User.get_or_none(id=user)
+    server_status, user_server, user_info = await asyncio.gather(
+        server_status_task, user_server_task, user_info_task
     )
 
-    permission = user_server.role if user_server else "guest"
-
+    permission = (
+        SerRoleEnum.owner
+        if user_info and user_info.role == "admin"
+        else (user_server.role if user_server else "guest")
+    )
     status_data = None
     if server_status and server_status.stat_data:
         stat_data = server_status.stat_data
@@ -110,20 +114,33 @@ async def GetServer_by_id_editor(
         UserServer.get_or_none(user=current_user.id, server=server_id),
     )
 
-    if not user_server:
+    user = await User.get_or_none(id=current_user.id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
+        )
+
+    # 获取服务器状态信息
+    server_status = await ServerStatus.get_or_none(server=server)
+
+    def no_permission():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="你咩有权限编辑它！它拒绝了你！",
         )
 
-    if not server:
-        return None
-
-    # 获取服务器状态信息
-    server_status = await ServerStatus.get_or_none(server=server)
-
     # 用户权限
-    permission = user_server.role  # 此时 user_server 已存在
+    permission = (
+        SerRoleEnum.owner
+        if user and user.role == RoleEnum.admin
+        else (user_server.role if user_server else no_permission())
+    )
+
+    if not user_server and (user and user.role != RoleEnum.admin):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="你咩有权限编辑它！它拒绝了你！",
+        )
 
     # 生成服务器状态数据
     status_data = None
@@ -169,8 +186,8 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
         )
 
     # 查找服务器的所有者和管理员
-    owners = await UserServer.filter(server=server_id, role="owner")
-    admins = await UserServer.filter(server=server_id, role="admin")
+    owners = await UserServer.filter(server=server_id, role=SerRoleEnum.admin)
+    admins = await UserServer.filter(server=server_id, role=SerRoleEnum.admin)
 
     async def to_user_base(user_server) -> UserBase:
         user = await user_server.user

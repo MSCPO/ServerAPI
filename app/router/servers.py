@@ -179,7 +179,7 @@ async def get_server(server_id: int, request: Request):
     },
 )
 async def get_server_editor(
-    server_id: int, current_user: dict = Depends(get_current_user)
+    server_id: int, current_user: jwt_data = Depends(get_current_user)
 ):
     """
     获取指定 ID 服务器的详细信息（编辑者）。
@@ -225,7 +225,7 @@ async def get_server_editor(
 async def update_server(
     server_id: int,
     update_data: UpdateServerRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: jwt_data = Depends(get_current_user),
 ):
     """
     更新指定 ID 服务器的详细信息（编辑者）。
@@ -237,10 +237,7 @@ async def update_server(
     返回更新后的服务器信息。
     """
     # 获取用户是否有权限编辑该服务器
-    if not await GetServer_by_id_editor(server_id, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
-        )
+    await GetServer_by_id_editor(server_id, current_user)
 
     # 查找服务器
     server = await Server.get_or_none(id=server_id)
