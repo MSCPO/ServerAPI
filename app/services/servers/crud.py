@@ -186,7 +186,7 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
         )
 
     # 查找服务器的所有者和管理员
-    owners = await UserServer.filter(server=server_id, role=SerRoleEnum.admin)
+    owners = await UserServer.filter(server=server_id, role=SerRoleEnum.owner)
     admins = await UserServer.filter(server=server_id, role=SerRoleEnum.admin)
 
     async def to_user_base(user_server) -> UserBase:
