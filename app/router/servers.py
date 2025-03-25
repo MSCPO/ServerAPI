@@ -1,6 +1,9 @@
+from typing import Annotated
+
 from fastapi import (
     APIRouter,
     Depends,
+    Form,
     HTTPException,
     Query,
     Request,
@@ -235,7 +238,7 @@ async def get_server_editor(
 )
 async def update_server(
     server_id: int,
-    update_data: UpdateServerRequest,
+    update_data: Annotated[UpdateServerRequest, Form()],
     current_user: jwt_data = Depends(get_current_user),
 ):
     """
@@ -343,10 +346,10 @@ async def get_server_gallerys(server_id: int):
 )
 async def add_server_gallerys(
     server_id: int,
-    add_data: AddServerGallerys,
+    gallery_data: Annotated[AddServerGallerys, Form()],
     current_user: jwt_data = Depends(get_current_user),
 ):
     # 获取用户是否有权限编辑该服务器
     await GetServer_by_id_editor(server_id, current_user)
-    await AddGallery(server_id, add_data)
+    await AddGallery(server_id, gallery_data)
     return {"detail": "成功添加服务器画册图片"}
