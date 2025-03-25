@@ -175,3 +175,4 @@ cython_debug/
 .env
 /noname.yml
 /servers.yaml
+config.py

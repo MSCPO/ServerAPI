@@ -13,6 +13,10 @@ DATABASE = {
             "default_connection": "default",
         }
     },
+    "aerich": {  # 为 Aerich 配置数据库连接
+        "models": ["aerich.models"],  # Aerich 模型
+        "default_connection": "default",  # 使用默认数据库连接
+    },
     "use_tz": False,
     "timezone": "Asia/Shanghai",
 }
@@ -37,13 +41,13 @@ async def init_db():
     for db_name, db_url in DATABASE["connections"].items():
         db_url = db_url.split("@", maxsplit=1)[-1]  # 提取 URL 部分
         logger.opt(colors=True).success(
-            f"<y>数据库: {db_name} 连接成功</y> URL: <r>{db_url}</r>"
+            f"<y>数据库：{db_name} 连接成功</y> URL: <r>{db_url}</r>"
         )
 
 
 async def disconnect():
     await Tortoise.close_connections()
-    logger.opt(colors=True).success("<y>数据库: 断开链接</y>")
+    logger.opt(colors=True).success("<y>数据库：断开链接</y>")
 
 
 def add_model(model: str, db_name: None | str = None, db_url: None | str = None):
@@ -51,7 +55,7 @@ def add_model(model: str, db_name: None | str = None, db_url: None | str = None)
     向数据库添加模型
     :param model: 模型名称
     :param db_name: 数据库名称
-    :param db_url: 数据库连接URL
+    :param db_url: 数据库连接 URL
     """
     if (db_name is not None and db_url is None) or (
         db_name is None and db_url is not None
@@ -63,9 +67,9 @@ def add_model(model: str, db_name: None | str = None, db_url: None | str = None)
         DATABASE["connections"][db_name] = db_url
         DATABASE["apps"][db_name] = {"models": [model], "default_connection": db_name}
         logger.opt(colors=True).success(
-            f"<y>数据库: 添加模型 {db_name}</y>: <r>{model}</r>"
+            f"<y>数据库：添加模型 {db_name}</y>: <r>{model}</r>"
         )
     else:
         # 向全局模型列表中添加模型
         models.append(model)
-        logger.opt(colors=True).success(f"<y>数据库: 添加模型</y>: <r>{model}</r>")
+        logger.opt(colors=True).success(f"<y>数据库：添加模型</y>: <r>{model}</r>")

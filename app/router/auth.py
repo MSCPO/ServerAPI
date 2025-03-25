@@ -34,6 +34,7 @@ from app.services.conn.redis import redis_client
 from app.services.user.crud import get_current_user
 from app.services.user.models import User
 from app.services.utils import (
+    convert_to_webp,
     generate_token,
     get_token_data,
     hash_password,
@@ -255,9 +256,7 @@ from app.log import logger
                         },
                         "显示名称已存在": {"detail": "显示名称已存在"},
                         "头像文件名无效": {"detail": "头像文件名无效"},
-                        "File type image/jpeg not allowed": {
-                            "detail": "File type image/jpeg not allowed"
-                        },
+                        "头像文件格式无效": {"detail": "头像文件格式无效"},
                         "头像文件大小不能超过 2 MB": {
                             "detail": "头像文件大小不能超过 2 MB"
                         },
@@ -348,14 +347,6 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件名无效"
         )
 
-    allowed_content_types = ["image/jpeg", "image/png", "image/webp"]
-
-    if avatar.content_type not in allowed_content_types:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type {avatar.content_type} not allowed",
-        )
-
     content = await avatar.read()
     if len(content) > 2 * 1024 * 1024:
         raise HTTPException(
@@ -363,13 +354,22 @@ async def register(
         )
 
     try:
-        avatar.file.seek(0)
+        avatar.file.seek(0)  # 归零指针，确保后续读取正常
         image = Image.open(BytesIO(await avatar.read()))
+        image.verify()  # 验证图片文件是否有效
+
+        # 检查图片格式
+        if image.format not in ["JPEG", "PNG", "WEBP"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件格式无效"
+            )
+
         width, height = image.size
         if width != height:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须是正方形"
             )
+
     except Exception as e:
         logger.error(f"Failed to open image: {e}")
         raise HTTPException(
@@ -377,7 +377,9 @@ async def register(
         ) from e
 
     try:
-        avatar_file = (await upload_file_to_s3(content, avatar.filename))[1]
+        avatar_hash = (
+            await upload_file_to_s3(convert_to_webp(content), avatar.filename)
+        )[1]
     except Exception as e:
         logger.error(f"Failed to upload avatar: {e}")
         raise HTTPException(
@@ -395,7 +397,7 @@ async def register(
             email=verify_data["email"],
             display_name=register_data.display_name,
             hashed_password=hash_password(register_data.password),
-            avatar_hash=avatar_file,
+            avatar_hash=avatar_hash,
             is_active=True,
         )
     except Exception as e:

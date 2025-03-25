@@ -1,5 +1,6 @@
 """工具函数模块"""
 
+import io
 import json as json
 import random
 import re
@@ -15,6 +16,7 @@ import httpx
 from fastapi import HTTPException
 from jinja2 import Template
 from passlib.context import CryptContext
+from PIL import Image
 
 from app.config import settings
 from app.log import logger
@@ -128,3 +130,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def hash_password(password: str) -> str:
     """密码加密"""
     return PWD_CONTEXT.hash(password)
+
+
+def convert_to_webp(file: bytes, quality: int | None = None) -> bytes:
+    """
+    将上传的图片文件转换为 WebP 格式并返回字节流。
+
+    :param file: 输入的图片文件对象（如上传的文件）
+    :param quality: WebP 图片的质量，默认为 80，范围是 0-100
+    :return: 转换后的 WebP 图片的字节流
+    """
+    img = Image.open(io.BytesIO(file))  # 从文件读取图片
+    img = img.convert("RGB")  # 确保图像为 RGB 模式
+
+    byte_io = io.BytesIO()
+
+    if quality is None:
+        img.save(byte_io, "WEBP", lossless=True, quality=quality)
+    else:
+        img.save(byte_io, "WEBP", quality=quality)
+    return byte_io.getvalue()

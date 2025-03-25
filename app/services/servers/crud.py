@@ -4,16 +4,27 @@ from fastapi import Depends, HTTPException, status
 
 from app.services.auth.schemas import jwt_data
 from app.services.servers.models import (
+    Gallery,
+    GalleryImage,
     Server,
     ServerStatus,
 )
 from app.services.servers.schemas import (
+    AddServerGallerys,
+    GetServerGallerys,
     GetServerIdShowAPI,
     GetServerManagers,
     GetServerShowAPI,
     GetServerStatusAPI,
     Motd,
     UserBase,
+)
+from app.services.servers.utils import (
+    get_server_cover_url,
+    get_server_gallerys_urls,
+    validate_and_upload_gallery,
+    validate_description,
+    validate_name,
 )
 from app.services.user.crud import get_current_user
 from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
@@ -60,9 +71,16 @@ async def GetServer_by_id(
         if user
         else asyncio.sleep(0, result=None)
     )
+    cover_task = get_server_cover_url(server)
+
     user_info_task = User.get_or_none(id=user)
-    server_status, user_server, user_info = await asyncio.gather(
-        server_status_task, user_server_task, user_info_task
+    (
+        server_status,
+        user_server,
+        user_info,
+        cover_url,
+    ) = await asyncio.gather(
+        server_status_task, user_server_task, user_info_task, cover_task
     )
 
     permission = (
@@ -100,6 +118,7 @@ async def GetServer_by_id(
         is_hide=server.is_hide,
         status=status_data,
         permission=permission,
+        cover_url=cover_url,
     )
 
 
@@ -173,6 +192,7 @@ async def GetServer_by_id_editor(
         is_hide=server.is_hide,
         status=status_data,
         permission=permission,
+        cover_url=await get_server_cover_url(server),
     )
 
 
@@ -207,3 +227,43 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
     )
 
     return GetServerManagers(admins=admins_list, owners=owners_list)
+
+
+async def GetGallerylist(server_id: int) -> GetServerGallerys:
+    # 查找是否有这个服务器
+    server = await Server.get_or_none(id=server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
+        )
+
+    return GetServerGallerys(
+        id=server.id,
+        name=server.name,
+        gallerys_url=await get_server_gallerys_urls(server),
+    )
+
+
+async def AddGallery(server_id, gallery_data: AddServerGallerys) -> None:
+    # 查找是否有这个服务器
+    server = await Server.get_or_none(id=server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
+        )
+
+    # 创建图库
+    if not server.gallery:
+        gallery = await Gallery.create()
+        server.gallery = gallery
+        await server.save()
+    await validate_name(gallery_data.title)
+    await validate_description(gallery_data.description)
+    # 创建图片
+    image_hash = await validate_and_upload_gallery(gallery_data.image)
+    await GalleryImage.create(
+        title=gallery_data.title,
+        description=gallery_data.description,
+        image_hash=image_hash,
+        gallery=gallery,
+    )
