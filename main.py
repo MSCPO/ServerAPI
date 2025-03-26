@@ -73,7 +73,6 @@ async def refresh_lock():
 @asynccontextmanager
 async def startup(app: FastAPI):
     await init_db()
-    await init_meilisearch_index()
     app.state.task = app.state.lock_task = None
 
     if await acquire_lock():
@@ -82,7 +81,7 @@ async def startup(app: FastAPI):
         # 存储任务引用
         app.state.task = asyncio.create_task(query_servers_periodically())
         app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
-
+        await init_meilisearch_index()
         await batch_sync_to_meilisearch()
         post_save(Server)(batch_sync_to_meilisearch)
         post_delete(Server)(batch_sync_to_meilisearch)

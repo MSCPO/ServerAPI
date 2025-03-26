@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from PIL import Image
 
 from app import logger
@@ -96,7 +96,7 @@ async def validate_link(link: str) -> None:
         )
 
 
-async def validate_and_upload_cover(cover) -> File:
+async def validate_and_upload_cover(cover: UploadFile) -> File:
     """验证并上传封面文件"""
     if not isinstance(cover.filename, str):
         raise HTTPException(
@@ -108,7 +108,6 @@ async def validate_and_upload_cover(cover) -> File:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="图片文件大小不能超过 5 MB",
         )
-
     try:
         cover.file.seek(0)  # 归零指针，确保后续读取正常
         image = Image.open(BytesIO(content))
@@ -119,10 +118,12 @@ async def validate_and_upload_cover(cover) -> File:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="图片文件格式无效"
             )
-
-        if image.size != (512, 300):
+        width, height = image.size
+        expected_ratio = 16 / 9
+        actual_ratio = width / height
+        if abs(actual_ratio - expected_ratio) > 0.01:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="图片必须是 512*300"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="图片比例最好为 512*300"
             )
 
     except Exception as e:
@@ -132,7 +133,7 @@ async def validate_and_upload_cover(cover) -> File:
         ) from e
 
     try:
-        return (await upload_file_to_s3(convert_to_webp(content), cover.filename))[1]
+        return (await upload_file_to_s3(convert_to_webp(content), "cover.webp"))[1]
     except Exception as e:
         logger.error(f"Failed to upload avatar: {e}")
         raise HTTPException(
@@ -140,7 +141,7 @@ async def validate_and_upload_cover(cover) -> File:
         ) from e
 
 
-async def validate_and_upload_gallery(cover) -> File:
+async def validate_and_upload_gallery(cover: UploadFile) -> File:
     """验证并上传画廊图片文件"""
     if not isinstance(cover.filename, str):
         raise HTTPException(
@@ -171,7 +172,7 @@ async def validate_and_upload_gallery(cover) -> File:
         ) from e
 
     try:
-        return (await upload_file_to_s3(convert_to_webp(content), cover.filename))[1]
+        return (await upload_file_to_s3(convert_to_webp(content), "cover.webp"))[1]
     except Exception as e:
         logger.error(f"Failed to upload avatar: {e}")
         raise HTTPException(

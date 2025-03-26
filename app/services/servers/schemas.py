@@ -123,7 +123,7 @@ class UpdateServerRequest(BaseModel):
     )
     version: str = Field(title="服务器版本", description="服务器运行的版本")
     link: str = Field(title="服务器链接", description="指向服务器详情的链接")
-    cover: UploadFile | None = File(description="头像文件")
+    cover: UploadFile | None = File(None, description="头像文件")
 
 
 # 返回一个服务器的所有主人

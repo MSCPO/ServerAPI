@@ -146,7 +146,7 @@ def convert_to_webp(file: bytes, quality: int | None = None) -> bytes:
     byte_io = io.BytesIO()
 
     if quality is None:
-        img.save(byte_io, "WEBP", lossless=True, quality=quality)
+        img.save(byte_io, "WEBP", lossless=True)
     else:
         img.save(byte_io, "WEBP", quality=quality)
     return byte_io.getvalue()
