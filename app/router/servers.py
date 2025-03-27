@@ -12,12 +12,13 @@ from fastapi import (
 
 from app.services.auth.schemas import jwt_data
 from app.services.servers.crud import (
-    AddGallery,
+    AddGalleryImage,
     GetGallerylist,
     GetServer_by_id,
     GetServer_by_id_editor,
     GetServerOwners_by_id,
     GetServers,
+    RemoveGalleryImage,
 )
 from app.services.servers.models import Server
 from app.services.servers.schemas import (
@@ -334,15 +335,7 @@ async def get_server_gallerys(server_id: int):
 @router.post(
     "/servers/{server_id}/gallerys",
     summary="添加服务器画册图片",
-    responses={
-        200: {
-            "description": "成功添加服务器画册图片",
-        },
-        404: {
-            "description": "未找到该服务器",
-            "content": {"application/json": {"example": {"detail": "未找到该服务器"}}},
-        },
-    },
+    status_code=status.HTTP_201_CREATED,
 )
 async def add_server_gallerys(
     server_id: int,
@@ -351,5 +344,22 @@ async def add_server_gallerys(
 ):
     # 获取用户是否有权限编辑该服务器
     await GetServer_by_id_editor(server_id, current_user)
-    await AddGallery(server_id, gallery_data)
+    await AddGalleryImage(server_id, gallery_data)
     return {"detail": "成功添加服务器画册图片"}
+
+
+# 删除服务器画册图片
+@router.delete(
+    "/servers/{server_id}/gallerys/{image_id}",
+    summary="删除服务器画册图片",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+async def remove_server_gallerys(
+    server_id: int,
+    image_id: int,
+    current_user: jwt_data = Depends(get_current_user),
+):
+    # 获取用户是否有权限编辑该服务器
+    await GetServer_by_id_editor(server_id, current_user)
+    await RemoveGalleryImage(server_id, image_id)
+    return {"detail": "成功删除服务器画册图片"}

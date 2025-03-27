@@ -27,6 +27,7 @@ async def get_server_gallerys_urls(server_data: Server) -> list[Gallery]:
     gallery = await server_data.gallery
     return [
         Gallery(
+            id=image.id,
             title=image.title,
             description=image.description,
             image_url=await get_server_galleryimage_url(image),
@@ -54,19 +55,20 @@ async def validate_tags(tags: list[str]) -> None:
             )
 
 
-async def validate_name(name: str) -> None:
+async def validate_name(name: str, min: int = 1, max: int = 10) -> None:
     """验证服务器名称字段"""
-    if not 1 <= len(name) <= 255:
+    if not min <= len(name) <= max:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="名称长度限制为 1~255"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"名称长度限制为 {min}~{max}",
         )
 
 
-async def validate_description(desc: str) -> None:
+async def validate_description(desc: str, min: int = 50) -> None:
     """验证简介字段"""
-    if len(desc) < 100:
+    if len(desc) < min:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="简介必须大于 100 字"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"简介必须大于 {min} 字"
         )
 
 

@@ -3,8 +3,9 @@ import uuid
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from tortoise.signals import post_delete, post_save
 
 from app.log import logger
@@ -124,6 +125,7 @@ app.include_router(webhook_router, tags=["webhook"])
 app.include_router(user_router, prefix="/v1", tags=["user"])
 app.include_router(search_router, prefix="/v1", tags=["search"])
 app.include_router(report_router, prefix="/v1", tags=["report"])
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)

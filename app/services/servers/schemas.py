@@ -17,6 +17,7 @@ class Motd(BaseModel):
 
 
 class GalleryBase(BaseModel):
+    id: int = Field(title="图片 ID", description="图片的唯一标识符")
     title: str = Field(title="图片标题", description="图片的标题")
     description: str = Field(title="图片描述", description="图片的描述")
 

@@ -244,7 +244,7 @@ async def GetGallerylist(server_id: int) -> GetServerGallerys:
     )
 
 
-async def AddGallery(server_id, gallery_data: AddServerGallerys) -> None:
+async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
     # 查找是否有这个服务器
     server = await Server.get_or_none(id=server_id)
     if not server:
@@ -267,3 +267,26 @@ async def AddGallery(server_id, gallery_data: AddServerGallerys) -> None:
         image_hash=image_hash,
         gallery=gallery,
     )
+
+
+async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
+    # 查找是否有这个服务器
+    server = await Server.get_or_none(id=server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
+        )
+
+    # 查找图库
+    if not server.gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="无法找到关联图库")
+    gallery = await Gallery.get_or_none(id=server.gallery.id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="图库不存在")
+
+    # 查找图片
+    image = await GalleryImage.get_or_none(id=image_id, gallery=gallery.id)
+    if not image:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="图片不存在")
+
+    await image.delete()
