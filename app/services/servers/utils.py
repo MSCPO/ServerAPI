@@ -46,7 +46,7 @@ async def validate_tags(tags: list[str]) -> None:
     """验证 tags 字段"""
     if len(tags) > 6:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过 7 个"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过 6 个"
         )
     for tag in tags:
         if not 1 <= len(tag) <= 4:
@@ -55,7 +55,7 @@ async def validate_tags(tags: list[str]) -> None:
             )
 
 
-async def validate_name(name: str, min: int = 1, max: int = 10) -> None:
+async def validate_name(name: str, min: int = 1, max: int = 20) -> None:
     """验证服务器名称字段"""
     if not min <= len(name) <= max:
         raise HTTPException(
