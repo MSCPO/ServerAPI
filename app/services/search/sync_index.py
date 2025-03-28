@@ -1,9 +1,16 @@
+from tortoise.signals import post_delete, post_save
+
 from app.log import logger
 from app.services.conn.meilisearch import client
 from app.services.servers.models import Server
 
 
-async def batch_sync_to_meilisearch():
+@post_delete(Server)
+@post_save(Server)
+async def batch_sync_to_meilisearch(*_):
+    """
+    同步服务器数据到 Meilisearch 索引
+    """
     servers = await Server.all()
     documents = [
         {

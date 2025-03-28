@@ -3,10 +3,8 @@ import uuid
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from tortoise.signals import post_delete, post_save
 
 from app.log import logger
 from app.router.auth import router as auth_router
@@ -84,8 +82,6 @@ async def startup(app: FastAPI):
         app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
         await init_meilisearch_index()
         await batch_sync_to_meilisearch()
-        post_save(Server)(batch_sync_to_meilisearch)
-        post_delete(Server)(batch_sync_to_meilisearch)
     else:
         logger.warning("⛔ 另一个进程已持有锁，不启动任务")
 
