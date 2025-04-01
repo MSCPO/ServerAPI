@@ -257,14 +257,14 @@ async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
         server.gallery = await Gallery.create()
         await server.save()
     await validate_name(gallery_data.title)
-    await validate_description(gallery_data.description)
+    await validate_description(gallery_data.description, min=3)
     # 创建图片
     image_hash = await validate_and_upload_gallery(gallery_data.image)
     await GalleryImage.create(
         title=gallery_data.title,
         description=gallery_data.description,
         image_hash=image_hash,
-        gallery=server.gallery,
+        gallery=await server.gallery,
     )
 
 
