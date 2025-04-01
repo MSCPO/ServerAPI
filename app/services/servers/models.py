@@ -23,6 +23,7 @@ class ServerTypeEnum(Enum):
 class Gallery(Model):
     id = fields.IntField(pk=True)
     images: fields.ReverseRelation["GalleryImage"]
+    created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
         table = "gallery"
