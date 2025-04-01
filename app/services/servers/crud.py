@@ -254,8 +254,7 @@ async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
 
     # 创建图库
     if not server.gallery:
-        gallery = await Gallery.create()
-        server.gallery = gallery
+        server.gallery = await Gallery.create()
         await server.save()
     await validate_name(gallery_data.title)
     await validate_description(gallery_data.description)
@@ -265,7 +264,7 @@ async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
         title=gallery_data.title,
         description=gallery_data.description,
         image_hash=image_hash,
-        gallery=gallery,
+        gallery=server.gallery,
     )
 
 
@@ -279,7 +278,9 @@ async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
 
     # 查找图库
     if not server.gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="无法找到关联图库")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="无法找到关联图库"
+        )
     gallery = await Gallery.get_or_none(id=server.gallery.id)
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="图库不存在")

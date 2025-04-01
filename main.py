@@ -18,7 +18,6 @@ from app.services.conn.meilisearch import init_meilisearch_index
 from app.services.conn.redis import redis_client
 from app.services.search.sync_index import batch_sync_to_meilisearch
 from app.services.servers.GetServerStatus import query_servers_periodically
-from app.services.servers.models import Server
 
 REDIS_LOCK_KEY = "query_servers_lock"
 REDIS_LOCK_TTL = 60
