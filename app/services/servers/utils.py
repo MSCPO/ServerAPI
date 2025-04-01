@@ -38,7 +38,7 @@ async def get_server_gallerys_urls(server_data: Server) -> list[Gallery]:
 
 async def get_server_galleryimage_url(gallery_model: GalleryImage) -> str:
     """获取服务器图库图片 URL"""
-    file_instance = gallery_model.image_hash
+    file_instance = await gallery_model.image_hash
     return file_instance.file_path
 
 
