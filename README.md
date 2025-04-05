@@ -1,3 +1,10 @@
-# ServerAPI
+# API 使用条款（Terms of Use）
 
-未开发完毕，请不要 Pull Request
+本服务端部署地址（<https://mscpoapi.crashvibe.cn>）仅授权开源前端项目进行非商业使用，需满足以下条件：
+
+1. 前端项目必须采用 OSI 认可的开源许可证（如 MIT、GPL、Apache 等）。
+2. 必须在前端项目 README 中注明本服务地址，并提供本后端项目的来源链接。
+3. 禁止封闭源代码的项目、商业用途、爬虫、大规模调用等行为。
+4. 对于违反本条款的行为，我保留随时封禁 API 调用的权利。
+
+如需商业授权，请联系我：[wlingzhenyu@163.com]。
