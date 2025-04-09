@@ -105,11 +105,19 @@ async def startup(app: FastAPI):
     await disconnect()
 
 
+origins = [
+    "https://mscpo.crashvibe.cn",
+    "https://mscpo.1fu.top",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://0.0.0.0:3000",
+]
+
 app = FastAPI(lifespan=startup)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=origins,  # Allows all origins
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
