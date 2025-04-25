@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from tortoise import Model, fields
 from tortoise.fields.base import Field
 
+from app.log import logger
 from app.services.conn.db import add_model
 
 if TYPE_CHECKING:
@@ -62,7 +63,7 @@ class Server(Model):
     async def save_with_user(self, user: "User") -> None:
         is_update = self.id is not None
         changed_fields = {}
-
+        logger.info(f"Saving server: {self.name}, is_update: {is_update}")
         if is_update:
             old = await Server.get(id=self.id)
             for field in self._meta.fields_map:
