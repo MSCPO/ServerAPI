@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     MEILI_URL: str
     MEILI_API_KEY: str
     MEILI_INDEX: str
+    REDIS_HOST: str
+    REDIS_PORT: int
 
     class Config:
         env_file = ".env"

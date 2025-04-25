@@ -1,8 +1,10 @@
-import aioredis
+from redis import asyncio
 
-redis_client = aioredis.StrictRedis(
-    host="192.168.10.112",
-    port=6379,
+from app.config import settings
+
+redis_client = asyncio.StrictRedis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
     db=0,
     decode_responses=True,
     max_connections=50,  # 最大连接数

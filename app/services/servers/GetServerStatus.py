@@ -15,7 +15,7 @@ async def query_servers_periodically():
         )
         # 并行执行所有任务
         await asyncio.gather(*tasks)
-        await asyncio.sleep(300)
+        await asyncio.sleep(60)
 
 
 async def query_server_periodically(server: Server):

@@ -20,7 +20,7 @@ from app.services.search.sync_index import batch_sync_to_meilisearch
 from app.services.servers.GetServerStatus import query_servers_periodically
 
 REDIS_LOCK_KEY = "query_servers_lock"
-REDIS_LOCK_TTL = 60
+REDIS_LOCK_TTL = 5
 PROCESS_ID = str(uuid.uuid4())
 
 
@@ -57,12 +57,11 @@ async def refresh_lock():
     定期刷新锁，防止锁过期
     """
     while True:
-        await asyncio.sleep(50)  # 每 50 秒续期
+        await asyncio.sleep(REDIS_LOCK_TTL * 0.6)
         stored_id: str = await redis_client.get(REDIS_LOCK_KEY)
 
         if stored_id and stored_id == PROCESS_ID:
             await redis_client.expire(REDIS_LOCK_KEY, REDIS_LOCK_TTL)
-            logger.success("🔄 锁已续期")
         else:
             logger.error("⛔ 续期失败，锁已被其他进程占用")
             break
@@ -77,10 +76,12 @@ async def startup(app: FastAPI):
         logger.success(f"🔐 获取到锁，进程 {PROCESS_ID} 启动任务")
 
         # 存储任务引用
-        app.state.task = asyncio.create_task(query_servers_periodically())
         app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
         await init_meilisearch_index()
-        await batch_sync_to_meilisearch()
+        app.state.task = asyncio.gather(
+            query_servers_periodically(),
+            batch_sync_to_meilisearch(),
+        )
     else:
         logger.warning("⛔ 另一个进程已持有锁，不启动任务")
 
