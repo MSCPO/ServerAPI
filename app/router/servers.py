@@ -39,6 +39,7 @@ from app.services.servers.utils import (
     validate_version,
 )
 from app.services.user.crud import get_current_user
+from app.services.user.models import User
 
 router = APIRouter()
 
@@ -282,7 +283,7 @@ async def update_server(
     server.link = update_data.link
 
     # 保存更新后的服务器信息
-    await server.save()
+    await server.save_with_user(await User.get(id=current_user.id))
 
     # 返回更新后的服务器信息
     return await GetServer_by_id_editor(server_id, current_user)
@@ -352,7 +353,7 @@ async def add_server_gallerys(
 @router.delete(
     "/servers/{server_id}/gallerys/{image_id}",
     summary="删除服务器画册图片",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def remove_server_gallerys(
     server_id: int,

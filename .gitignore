@@ -176,3 +176,4 @@ cython_debug/
 /noname.yml
 /servers.yaml
 config.py
+.DS_Store

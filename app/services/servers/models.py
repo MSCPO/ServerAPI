@@ -1,10 +1,14 @@
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from tortoise import Model, fields
 from tortoise.fields.base import Field
 
-from app.file_storage.models import File
 from app.services.conn.db import add_model
+
+if TYPE_CHECKING:
+    from app.file_storage.models import File
+    from app.services.user.models import User
 
 add_model(__name__)
 
@@ -45,7 +49,7 @@ class Server(Model):
         max_length=50, choices=[(tag.name, tag.value) for tag in AuthModeEnum]
     )
     tags: Field[list[str]] = fields.JSONField(default=list)
-    cover_hash: fields.ForeignKeyRelation[File] | None = fields.ForeignKeyField(
+    cover_hash: fields.ForeignKeyRelation["File"] | None = fields.ForeignKeyField(
         "default.File", related_name="cover_hash", on_delete=fields.SET_NULL, null=True
     )
     gallery: fields.ForeignKeyRelation[Gallery] | None = fields.ForeignKeyField(
@@ -55,6 +59,25 @@ class Server(Model):
         null=True,
     )
 
+    async def save_with_user(self, user: "User") -> None:
+        is_update = self.id is not None
+        changed_fields = {}
+
+        if is_update:
+            old = await Server.get(id=self.id)
+            for field in self._meta.fields_map:
+                old_val = getattr(old, field)
+                new_val = getattr(self, field)
+                if old_val != new_val:
+                    changed_fields[field] = old_val
+
+        await self.save()
+
+        if changed_fields:
+            await ServerLog.create(
+                server=self, user=user, changed_fields=changed_fields
+            )
+
     class Meta:
         table = "server"
 
@@ -63,7 +86,7 @@ class GalleryImage(Model):
     id = fields.IntField(pk=True)
     title = fields.CharField(max_length=255)
     description = fields.TextField()
-    image_hash: fields.ForeignKeyRelation[File] = fields.ForeignKeyField(
+    image_hash: fields.ForeignKeyRelation["File"] = fields.ForeignKeyField(
         "default.File", related_name="gallery_images", on_delete=fields.CASCADE
     )
     gallery: fields.ForeignKeyRelation[Gallery] = fields.ForeignKeyField(
@@ -83,3 +106,18 @@ class ServerStatus(Model):
 
     class Meta:
         table = "server_stats"
+
+
+class ServerLog(Model):
+    id = fields.IntField(pk=True, generated=True)
+    server: fields.ForeignKeyRelation["Server"] = fields.ForeignKeyField(
+        "default.Server", related_name="logs", on_delete=fields.CASCADE
+    )
+    user: fields.ForeignKeyRelation["User"] | None = fields.ForeignKeyField(
+        "default.User", related_name="server_logs", on_delete=fields.SET_NULL, null=True
+    )
+    changed_fields = fields.JSONField()
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "server_log"
