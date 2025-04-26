@@ -1,3 +1,5 @@
+from venv import logger
+
 from mcstatus import BedrockServer, JavaServer
 from mcstatus.motd import Motd
 from mcstatus.status_response import BedrockStatusResponse, JavaStatusResponse
@@ -21,6 +23,7 @@ async def get_server_stats(host: str, server_type: str):
         elif server_type == "BEDROCK":
             response = await _handle_bedrock_stats(host)
         else:
+            logger.error(f"Unsupported server type: {server_type}; host: {host}")
             raise ValueError("Unsupported server type")
 
         return format_response(response)

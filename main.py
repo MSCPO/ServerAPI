@@ -17,7 +17,7 @@ from app.services.conn.db import disconnect, init_db
 from app.services.conn.meilisearch import init_meilisearch_index
 from app.services.conn.redis import redis_client
 from app.services.search.sync_index import sync_meilisearch_while
-from app.services.servers.GetServerStatus import query_servers_periodically
+from app.services.servers.get_stats import query_servers_periodically
 
 REDIS_LOCK_KEY = "query_servers_lock"
 REDIS_LOCK_TTL = 5
