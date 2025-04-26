@@ -1,8 +1,8 @@
-from redis import asyncio
+from redis.asyncio import StrictRedis
 
 from app.config import settings
 
-redis_client = asyncio.StrictRedis(
+redis_client = StrictRedis(
     host=settings.REDIS_HOST,
     port=settings.REDIS_PORT,
     db=0,

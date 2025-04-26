@@ -1,10 +1,9 @@
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from tortoise import Model, fields
 from tortoise.fields.base import Field
 
-from app.log import logger
 from app.services.conn.db import add_model
 
 if TYPE_CHECKING:
@@ -61,16 +60,23 @@ class Server(Model):
     )
 
     async def save_with_user(self, user: "User") -> None:
-        is_update = self.id is not None
-        changed_fields = {}
-        logger.info(f"Saving server: {self.name}, is_update: {is_update}")
-        if is_update:
-            old = await Server.get(id=self.id)
-            for field in self._meta.fields_map:
-                old_val = getattr(old, field)
-                new_val = getattr(self, field)
-                if old_val != new_val:
-                    changed_fields[field] = old_val
+        """
+        保存模型并记录变更日志（仅在更新时有变更才生成日志）。
+        """
+        changed_fields: dict[str, Any] = {}
+
+        # 只有已有 ID（即更新操作）时，才计算变更
+        if self.id:
+            # 取旧数据
+            old = await type(self).get(id=self.id)
+            # 字段列表一次性取出
+            fields = self._meta.db_fields
+            # 一次性构建 changed_fields
+            changed_fields = {
+                field: getattr(old, field)
+                for field in fields
+                if getattr(old, field) != getattr(self, field)
+            }
 
         await self.save()
 
@@ -101,9 +107,7 @@ class GalleryImage(Model):
 class ServerStatus(Model):
     server = fields.ForeignKeyField("default.Server", related_name="stats")
     timestamp = fields.DatetimeField(auto_now_add=True)
-    stat_data: Field[dict] = fields.JSONField(
-        default=dict, null=True
-    )  # 用于存储查询结果
+    stat_data = fields.JSONField(default=dict, null=True)  # 用于存储查询结果
 
     class Meta:
         table = "server_stats"

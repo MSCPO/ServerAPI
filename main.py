@@ -16,7 +16,7 @@ from app.router.webhook import router as webhook_router
 from app.services.conn.db import disconnect, init_db
 from app.services.conn.meilisearch import init_meilisearch_index
 from app.services.conn.redis import redis_client
-from app.services.search.sync_index import batch_sync_to_meilisearch
+from app.services.search.sync_index import sync_meilisearch_while
 from app.services.servers.GetServerStatus import query_servers_periodically
 
 REDIS_LOCK_KEY = "query_servers_lock"
@@ -36,20 +36,17 @@ async def acquire_lock() -> bool:
     return lock_set is True
 
 
-async def release_lock():
-    """
-    释放 Redis 分布式锁（仅在自己持有时释放）。
-    """
-
-    # 使用 Lua 脚本确保原子性（避免误删别人的锁）
-    lua_script = """
+release_lock_script = redis_client.register_script("""
     if redis.call("GET", KEYS[1]) == ARGV[1] then
         return redis.call("DEL", KEYS[1])
     else
         return 0
     end
-    """
-    await redis_client.eval(lua_script, 1, REDIS_LOCK_KEY, PROCESS_ID)
+""")
+
+
+async def release_lock():
+    await release_lock_script(keys=[REDIS_LOCK_KEY], args=[PROCESS_ID])
 
 
 async def refresh_lock():
@@ -78,10 +75,10 @@ async def startup(app: FastAPI):
         # 存储任务引用
         app.state.lock_task = asyncio.create_task(refresh_lock())  # 续期任务
         await init_meilisearch_index()
-        app.state.task = asyncio.gather(
-            query_servers_periodically(),
-            batch_sync_to_meilisearch(),
-        )
+        app.state.task = [
+            asyncio.create_task(query_servers_periodically()),
+            asyncio.create_task(sync_meilisearch_while()),
+        ]
     else:
         logger.warning("⛔ 另一个进程已持有锁，不启动任务")
 
@@ -89,11 +86,12 @@ async def startup(app: FastAPI):
 
     # 进程退出时清理任务
     if app.state.task:
-        app.state.task.cancel()
-        try:
-            await app.state.task
-        except asyncio.CancelledError:
-            logger.success("✅ 任务已取消")
+        for task in app.state.task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                logger.success("✅ 任务已取消")
 
     if app.state.lock_task:
         app.state.lock_task.cancel()

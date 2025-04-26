@@ -14,12 +14,15 @@ async def query_servers_periodically():
             asyncio.create_task(query_server_periodically(server)) for server in servers
         )
         # 并行执行所有任务
+        logger.info(
+            f"正在查询服务器状态，共 {len(servers)} 个服务器，任务数：{len(tasks)}"
+        )
         await asyncio.gather(*tasks)
+        logger.info("已同步服务器状态")
         await asyncio.sleep(60)
 
 
 async def query_server_periodically(server: Server):
-    logger.info(f"Querying server {server.name} ({server.ip})")
     newstats = await get_server_stats(server.ip, server.type)
     stats, _ = await ServerStatus.get_or_create(server=server)
     stats.stat_data = newstats
