@@ -30,7 +30,7 @@ def validate_password(password: str) -> bool:
     if len(password) < 8 or len(password) > 16:
         return False
 
-    patterns = [r"\d", r"[A-Z]", r"[a-z]", r"[@#$%^&+=!]"]
+    patterns = [r"\d", r"[A-Z]", r"[a-z]"]
 
     type_count = sum(bool(re.search(pattern, password)) for pattern in patterns)
 

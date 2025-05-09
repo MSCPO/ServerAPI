@@ -313,7 +313,7 @@ async def register(
     if not validate_password(register_data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="密码必须至少 8 个字符，并包含至少一个数字、一个大写字母和一个特殊字符",
+            detail="密码必须 8～16 个字符，并包含至少一个数字、一个大写字母",
         )
 
     # 验证 Token
