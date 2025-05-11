@@ -13,6 +13,7 @@ from fastapi import (
 from app.services.auth.schemas import jwt_data
 from app.services.servers.crud import (
     AddGalleryImage,
+    GetAllPlayersNum,
     GetGallerylist,
     GetServer_by_id,
     GetServer_by_id_editor,
@@ -364,3 +365,22 @@ async def remove_server_gallerys(
     await GetServer_by_id_editor(server_id, current_user)
     await RemoveGalleryImage(server_id, image_id)
     return {"detail": "成功删除服务器画册图片"}
+
+
+# 获取所有服务器玩家总数
+@router.get(
+    "/servers/players",
+    summary="获取所有服务器玩家总数",
+    responses={
+        200: {
+            "description": "成功获取所有服务器玩家总数",
+            "content": {"application/json": {"example": {"total_players": 100}}},
+        }
+    },
+)
+async def get_all_servers_players():
+    """
+    获取所有服务器的玩家总数。
+    """
+    total_players = await GetAllPlayersNum()
+    return {"total_players": total_players}

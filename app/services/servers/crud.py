@@ -291,3 +291,15 @@ async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="图片不存在")
 
     await image.delete()
+
+
+# 获取所有服务器的玩家总和
+async def GetAllPlayersNum() -> int:
+    # 并发获取每个服务器的玩家数量
+    server_statuses = await ServerStatus.all()
+
+    return sum(
+        server_status.stat_data["players"]["online"]
+        for server_status in server_statuses
+        if server_status and server_status.stat_data
+    )
