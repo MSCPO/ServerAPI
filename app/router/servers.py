@@ -28,6 +28,7 @@ from app.services.servers.schemas import (
     GetServerIdShowAPI,
     GetServerManagers,
     GetServerShowAPI,
+    ServerFilter,
     UpdateServerRequest,
 )
 from app.services.servers.utils import (
@@ -64,10 +65,14 @@ router = APIRouter()
 )
 async def list_servers(
     request: Request,
+    is_member: bool = Query(True, description="是否为成员服务器"),
+    modes: str | None = Query(None, description="模式"),
+    authModes: list[str] = Query(["OFFLINE", "YGGDRASIL", "OFFICIAL"]),
+    tags: list[str] = Query(None),
     limit: int = Query(5, ge=1),
     offset: int = Query(0, ge=0),
     random: bool = Query(True),
-    seed: int = Query(None, ge=0),
+    seed: int | None = Query(None, ge=0),
 ):
     """
     获取服务器列表。
@@ -82,8 +87,19 @@ async def list_servers(
         token = authorization.split(" ")[1]
         current_user = await get_current_user(token)
     user = current_user.id if current_user else None
+    filter = ServerFilter(
+        is_member=is_member,
+        modes=modes,
+        authModes=authModes,
+        tags=tags,
+    )
     return await GetServers(
-        limit=limit, offset=offset,is_random=random, seed=seed, user=user
+        limit=limit,
+        offset=offset,
+        is_random=random,
+        seed=seed,
+        user=user,
+        filter=filter,
     )
 
 

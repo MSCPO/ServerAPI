@@ -18,6 +18,7 @@ from app.services.servers.schemas import (
     GetServerShowAPI,
     GetServerStatusAPI,
     Motd,
+    ServerFilter,
     UserBase,
 )
 from app.services.servers.utils import (
@@ -33,6 +34,7 @@ from app.services.user.utils import get_user_avatar_url
 
 
 async def GetServers(
+    filter: ServerFilter,
     limit: int | None = None,
     offset: int = 0,
     is_random: bool = True,
@@ -40,33 +42,55 @@ async def GetServers(
     user: int | None = None,
 ) -> GetServerShowAPI:
     # 并发查询服务器总数和成员数
-    total_servers, total_member = await asyncio.gather(
-        Server.all().count(), Server.filter(is_member=True).count()
-    )
+    total_member = await Server.filter(is_member=True).count()
+    query = Server.all()
 
-    # 获取所有服务器
-    all_servers = await Server.all()
+    # 应用过滤条件
+    if filter.is_member:
+        query = query.filter(is_member=filter.is_member)
 
-    # 先进行随机排序
+    if filter.modes:
+        query = query.filter(type=filter.modes)
+
+    if filter.authModes:
+        query = query.filter(auth_mode__in=filter.authModes)
+
+    if filter.tags:
+        # 对标签进行过滤 (标签是数组字段，需要特殊处理)
+        # 这里假设tags字段是JSON数组，查询包含任意指定标签的服务器
+        for tag in filter.tags:
+            query = query.filter(tags__contains=tag)
+
+    # 获取过滤后的服务器
+    all_servers = await query
+
+    # 随机排序
     if is_random:
         if seed is None:
             seed = random.randint(0, 2**32 - 1)
         random.seed(seed)
         random.shuffle(all_servers)
 
-    # 然后应用分页
-    paginated_servers = all_servers[offset:]
-    if limit is not None:
-        paginated_servers = paginated_servers[:limit]
-
-    # 并发调用每个服务器的详情查询
-    tasks = [GetServer_by_id(server.id, user) for server in paginated_servers]
+    # 并发获取所有服务器的详情
+    tasks = [GetServer_by_id(server.id, user) for server in all_servers]
     server_info_list = await asyncio.gather(*tasks)
-    # 过滤掉返回 None 的情况
     server_list = [info for info in server_info_list if info is not None]
 
+    total_servers = len(server_list)
+
+    # 将有info.status的排在前面，没有info.status的排在后面
+    server_list.sort(key=lambda x: x.status is None)
+
+    # 应用分页
+    server_list = server_list[offset:]
+    if limit is not None:
+        server_list = server_list[:limit]
+
     return GetServerShowAPI(
-        server_list=server_list, total_member=total_member, total=total_servers, random_seed=seed
+        server_list=server_list,
+        total_member=total_member,
+        total=total_servers,
+        random_seed=seed,
     )
 
 

@@ -32,7 +32,7 @@ class AddServerGallerys(GalleryBase):
 
 class GetServerStatusAPI(BaseModel):
     players: dict[str, int] = Field(
-        title="在线玩家数量", description="当前在线的玩家数量"
+        title="玩家数", description="当前在线的玩家数量以及最大可容纳的玩家数量"
     )
     delay: float = Field(title="延迟", description="服务器的延迟时间")
     version: str = Field(title="版本", description="服务器的软件版本")
@@ -115,6 +115,23 @@ class GetServerShowAPI(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ServerFilter(BaseModel):
+    is_member: bool = Field(
+        True,
+        title="是否为成员服务器",
+        description="是否是成员专属服务器",
+    )
+    modes: str | None = Field(None, title="模式", description="服务器模式筛选")
+    authModes: list[str] = Field(
+        ["OFFLINE", "YGGDRASIL", "OFFICIAL"],
+        title="认证模式",
+        description="服务器认证模式筛选",
+    )
+    tags: list[str] | None = Field(
+        None, title="服务器标签", description="服务器标签筛选"
+    )
 
 
 class UpdateServerRequest(BaseModel):
