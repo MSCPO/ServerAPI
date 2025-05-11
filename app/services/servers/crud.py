@@ -1,4 +1,5 @@
 import asyncio
+import random
 
 from fastapi import Depends, HTTPException, status
 
@@ -32,27 +33,40 @@ from app.services.user.utils import get_user_avatar_url
 
 
 async def GetServers(
-    limit: int | None = None, offset: int = 0, user: int | None = None
+    limit: int | None = None,
+    offset: int = 0,
+    is_random: bool = True,
+    seed: int | None = None,
+    user: int | None = None,
 ) -> GetServerShowAPI:
     # 并发查询服务器总数和成员数
     total_servers, total_member = await asyncio.gather(
         Server.all().count(), Server.filter(is_member=True).count()
     )
 
-    # 构建查询
-    query = Server.all().offset(offset)
+    # 获取所有服务器
+    all_servers = await Server.all()
+
+    # 先进行随机排序
+    if is_random:
+        if seed is None:
+            seed = random.randint(0, 2**32 - 1)
+        random.seed(seed)
+        random.shuffle(all_servers)
+
+    # 然后应用分页
+    paginated_servers = all_servers[offset:]
     if limit is not None:
-        query = query.limit(limit)
-    server_query = await query
+        paginated_servers = paginated_servers[:limit]
 
     # 并发调用每个服务器的详情查询
-    tasks = [GetServer_by_id(server.id, user) for server in server_query]
+    tasks = [GetServer_by_id(server.id, user) for server in paginated_servers]
     server_info_list = await asyncio.gather(*tasks)
     # 过滤掉返回 None 的情况
     server_list = [info for info in server_info_list if info is not None]
 
     return GetServerShowAPI(
-        server_list=server_list, total_member=total_member, total=total_servers
+        server_list=server_list, total_member=total_member, total=total_servers, random_seed=seed
     )
 
 

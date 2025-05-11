@@ -64,16 +64,13 @@ router = APIRouter()
 )
 async def list_servers(
     request: Request,
-    limit: int = Query(None, ge=1),
+    limit: int = Query(5, ge=1),
     offset: int = Query(0, ge=0),
+    random: bool = Query(True),
+    seed: int = Query(None, ge=0),
 ):
     """
     获取服务器列表。
-
-    - `limit`: 返回的服务器数量，默认为空，传入 1 及以上的值。
-    - `offset`: 查询的起始位置，默认为 0。
-
-    返回值为服务器列表，包含基本的服务器信息。
     """
     if limit is not None and limit > 50:
         raise HTTPException(
@@ -85,7 +82,9 @@ async def list_servers(
         token = authorization.split(" ")[1]
         current_user = await get_current_user(token)
     user = current_user.id if current_user else None
-    return await GetServers(limit=limit, offset=offset, user=user)
+    return await GetServers(
+        limit=limit, offset=offset,is_random=random, seed=seed, user=user
+    )
 
 
 # 获取服务器的具体信息

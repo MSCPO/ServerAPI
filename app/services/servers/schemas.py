@@ -109,6 +109,9 @@ class GetServerShowAPI(BaseModel):
         title="会员服务器总数", description="当前会员服务器的总数"
     )
     total: int = Field(title="服务器总数", description="当前所有服务器的总数")
+    random_seed: int | None = Field(
+        None, title="随机种子", description="本次随机的随机种子，固定分页用"
+    )  # 随机种子
 
     class Config:
         from_attributes = True
