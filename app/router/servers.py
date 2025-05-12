@@ -29,6 +29,7 @@ from app.services.servers.schemas import (
     GetServerManagers,
     GetServerShowAPI,
     ServerFilter,
+    ServerTotalPlayers,
     UpdateServerRequest,
 )
 from app.services.servers.utils import (
@@ -386,6 +387,7 @@ async def remove_server_gallerys(
 @router.get(
     "/servers/players",
     summary="获取所有服务器玩家总数",
+    response_model=ServerTotalPlayers,
     responses={
         200: {
             "description": "成功获取所有服务器玩家总数",
@@ -393,9 +395,8 @@ async def remove_server_gallerys(
         }
     },
 )
-async def get_all_servers_players():
+async def get_all_servers_players() -> ServerTotalPlayers:
     """
     获取所有服务器的玩家总数。
     """
-    total_players = await GetAllPlayersNum()
-    return {"total_players": total_players}
+    return await GetAllPlayersNum()

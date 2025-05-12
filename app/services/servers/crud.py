@@ -19,6 +19,7 @@ from app.services.servers.schemas import (
     GetServerStatusAPI,
     Motd,
     ServerFilter,
+    ServerTotalPlayers,
     UserBase,
 )
 from app.services.servers.utils import (
@@ -332,12 +333,13 @@ async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
 
 
 # 获取所有服务器的玩家总和
-async def GetAllPlayersNum() -> int:
+async def GetAllPlayersNum() -> ServerTotalPlayers:
     # 并发获取每个服务器的玩家数量
     server_statuses = await ServerStatus.all()
 
-    return sum(
+    return ServerTotalPlayers(total_players=sum(
         server_status.stat_data["players"]["online"]
         for server_status in server_statuses
         if server_status and server_status.stat_data
     )
+)

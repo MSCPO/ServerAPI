@@ -156,3 +156,7 @@ class GetServerManagers(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ServerTotalPlayers(BaseModel):
+    total_players: int = Field(title="服务器总玩家数", description="服务器的总玩家数")
