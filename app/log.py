@@ -47,7 +47,7 @@ default_format: str = (
 logger.remove()
 logger_id = logger.add(
     sys.stdout,
-    level=0,
+    level="INFO",
     diagnose=True,
     format=default_format,
     filter=default_filter,

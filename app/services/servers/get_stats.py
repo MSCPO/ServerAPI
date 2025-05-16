@@ -48,7 +48,7 @@ async def consumer(worker_id: int):
                 # 更新缓存
                 status_cache[server.id] = {"stat_data": new_stats, "timestamp": now}
 
-                logger.info(f"[Worker {worker_id}] 更新服务器 {server.id} 状态")
+                logger.debug(f"[Worker {worker_id}] 更新服务器 {server.id} 状态")
             else:
                 logger.debug(f"[Worker {worker_id}] 跳过未变服务器 {server.id}")
 
