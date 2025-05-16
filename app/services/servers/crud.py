@@ -337,9 +337,10 @@ async def GetAllPlayersNum() -> ServerTotalPlayers:
     # 并发获取每个服务器的玩家数量
     server_statuses = await ServerStatus.all()
 
-    return ServerTotalPlayers(total_players=sum(
-        server_status.stat_data["players"]["online"]
-        for server_status in server_statuses
-        if server_status and server_status.stat_data
+    return ServerTotalPlayers(
+        total_players=sum(
+            server_status.stat_data["players"]["online"]
+            for server_status in server_statuses
+            if server_status and server_status.stat_data
+        )
     )
-)

@@ -4,7 +4,7 @@ requires-python = ">=3.10, <4"
 
 [[package]]
 name = "aerich"
-version = "0.8.2"
+version = "0.9.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "asyncclick" },
@@ -12,9 +12,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "tortoise-orm" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/dc/d1/701a44d8f7fdccf700400ce16a26c679b3f4e36de9fb86c3d9f55f64b07f/aerich-0.8.2.tar.gz", hash = "sha256:0ed2b15bb017785d17323329e5448b4b12fcfec08a20932626c12aa59a8378d6" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/2f/4b/1facb78fea47f790040035b94fdcc31630fabe1bda49ebc7a4f374da1757/aerich-0.9.0.tar.gz", hash = "sha256:37c7ca71e947e7de3aa0e778cb193fc1faebf9136a0f1108b52b902918b85acc" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/92/6a/a3f4e906ac8d7fe0af4d41ded66edb6332d9d289011da2033eeab69393d2/aerich-0.8.2-py3-none-any.whl", hash = "sha256:c1000cebd8525a1310a0cf0ea7d9a03cc2529413f182e90f08a6c6f4f61edcda" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/0f/b6/4a4874edd218cf38110ce129967e02c8fb3a85fec46713d8df2e0d9a9248/aerich-0.9.0-py3-none-any.whl", hash = "sha256:64d4b79eb789895c83765d6a9fdc9d9fb047d5c39c369eeab0e3e043dfacc8a6" },
 ]
 
 [[package]]
@@ -1455,14 +1455,14 @@ wheels = [
 
 [[package]]
 name = "redis"
-version = "6.0.0"
+version = "6.1.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/79/12/dffaaa4374b8d5f3b7ff5c40025c9db387e06264302d5a9da6043cd84e1f/redis-6.0.0.tar.gz", hash = "sha256:5446780d2425b787ed89c91ddbfa1be6d32370a636c8fdb687f11b1c26c1fa88" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/a6/af/e875d57383653e5d9065df8552de1deb7576b4d3cf3af90cde2e79ff7f65/redis-6.1.0.tar.gz", hash = "sha256:c928e267ad69d3069af28a9823a07726edf72c7e37764f43dc0123f37928c075" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/08/c8/68081c9d3531f7b2a4d663326b96a9dcbc2aef47df3c6b5c38dea90dff02/redis-6.0.0-py3-none-any.whl", hash = "sha256:a2e040aee2cdd947be1fa3a32e35a956cd839cc4c1dbbe4b2cdee5b9623fd27c" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/28/5f/cf36360f80ae233bd1836442f5127818cfcfc7b1846179b60b2e9a4c45c9/redis-6.1.0-py3-none-any.whl", hash = "sha256:3b72622f3d3a89df2a6041e82acd896b0e67d9f54e9bcd906d091d23ba5219f6" },
 ]
 
 [[package]]
@@ -1505,16 +1505,16 @@ wheels = [
 
 [[package]]
 name = "rich-toolkit"
-version = "0.14.5"
+version = "0.14.6"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "click" },
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/d1/24/f0678256fbe0643b4ba00a460f4b736ef07042e459f8d4087c8b7011ab81/rich_toolkit-0.14.5.tar.gz", hash = "sha256:1cb7a3fa0bdbf35793460708664f3f797e8b18cedec9cd41a7e6125e4bc6272b" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/f6/31/b6d055f291a660a7bcaec4bcc9457b9fef8ecb6293e527b1eef1840aefd4/rich_toolkit-0.14.6.tar.gz", hash = "sha256:9dbd40e83414b84e828bf899115fff8877ce5951b73175f44db142902f07645d" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/d1/13/621cc551b72de51e6e5cb7cfc510a141e1858bd380ee3c8108fbda4a6be0/rich_toolkit-0.14.5-py3-none-any.whl", hash = "sha256:2fe9846ecbf5d0cdf236c7f43452b68d9da1436a81594aba6b79b3c48b05703b" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/2e/3c/7a824c0514e87c61000583ac22c8321da6dc8e58a93d5f56e583482a2ee0/rich_toolkit-0.14.6-py3-none-any.whl", hash = "sha256:764f3a5f9e4b539ce805596863299e8982599514906dc5e3ccc2d390ef74c301" },
 ]
 
 [[package]]
@@ -1596,11 +1596,11 @@ dev = [{ name = "aerich", specifier = ">=0.8.2" }]
 
 [[package]]
 name = "setuptools"
-version = "80.4.0"
+version = "80.7.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/95/32/0cc40fe41fd2adb80a2f388987f4f8db3c866c69e33e0b4c8b093fdf700e/setuptools-80.4.0.tar.gz", hash = "sha256:5a78f61820bc088c8e4add52932ae6b8cf423da2aff268c23f813cfbb13b4006" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/9e/8b/dc1773e8e5d07fd27c1632c45c1de856ac3dbf09c0147f782ca6d990cf15/setuptools-80.7.1.tar.gz", hash = "sha256:f6ffc5f0142b1bd8d0ca94ee91b30c0ca862ffd50826da1ea85258a06fd94552" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/b1/93/dba5ed08c2e31ec7cdc2ce75705a484ef0be1a2fecac8a58272489349de8/setuptools-80.4.0-py3-none-any.whl", hash = "sha256:6cdc8cb9a7d590b237dbe4493614a9b75d0559b888047c1f67d49ba50fc3edb2" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/a1/18/0e835c3a557dc5faffc8f91092f62fc337c1dab1066715842e7a4b318ec4/setuptools-80.7.1-py3-none-any.whl", hash = "sha256:ca5cc1069b85dc23070a6628e6bcecb3292acac802399c7f8edc0100619f9009" },
 ]
 
 [[package]]
