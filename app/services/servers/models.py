@@ -107,7 +107,7 @@ class GalleryImage(Model):
 class ServerStatus(Model):
     server = fields.ForeignKeyField("default.Server", related_name="stats")
     timestamp = fields.DatetimeField(auto_now_add=True)
-    stat_data: Field[dict] = fields.JSONField(
+    stat_data: Field[dict | None] = fields.JSONField(
         default=dict, null=True
     )  # 用于存储查询结果
 
