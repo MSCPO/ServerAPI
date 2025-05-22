@@ -43,7 +43,7 @@ class User(UserBase):
     created_at: datetime = Field(..., description="用户创建时间")
     last_login: datetime | None = Field(None, description="用户最后登录时间")
     last_login_ip: str | None = Field(
-        None, max_length=15, description="用户最后登录 IP 地址"
+        None, description="用户最后登录 IP 地址"
     )
     servers: list[tuple[SerRoleEnum, int]] = Field(
         [], description="用户拥有的服务器 ID 列表"

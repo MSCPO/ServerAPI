@@ -52,7 +52,7 @@ class User(Model):
     is_active = fields.BooleanField(default=False)
     created_at = fields.DatetimeField(auto_now_add=True)
     last_login = fields.DatetimeField(null=True)
-    last_login_ip = fields.CharField(max_length=15, null=True)
+    last_login_ip = fields.CharField(max_length=45, null=True)
 
     class Meta:
         table = "users"
