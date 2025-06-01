@@ -89,8 +89,6 @@ class Ticket(Model):
     report_reason = fields.TextField(null=True)  # 举报理由
 
     admin_remark = fields.TextField(null=True)  # 处理备注
-    created_at = fields.DatetimeField(auto_now_add=True)  # 创建时间
-    updated_at = fields.DatetimeField(auto_now=True)  # 更新时间
 
     class Meta:
         table = "ticket"  # 数据表名
