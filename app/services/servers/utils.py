@@ -44,9 +44,9 @@ async def get_server_galleryimage_url(gallery_model: GalleryImage) -> str:
 
 async def validate_tags(tags: list[str]) -> None:
     """验证 tags 字段"""
-    if len(tags) > 6:
+    if len(tags) > 7:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过 6 个"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="tags 数量不能超过 7 个"
         )
     for tag in tags:
         if not 1 <= len(tag) <= 4:
@@ -64,7 +64,7 @@ async def validate_name(name: str, min: int = 1, max: int = 20) -> None:
         )
 
 
-async def validate_description(desc: str, min: int = 50) -> None:
+async def validate_description(desc: str, min: int = 100) -> None:
     """验证简介字段"""
     if len(desc) < min:
         raise HTTPException(

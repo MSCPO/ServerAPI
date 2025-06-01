@@ -1,8 +1,14 @@
-from venv import logger
+import time
+
+from app.log import logger
 
 from mcstatus import BedrockServer, JavaServer
 from mcstatus.motd import Motd
 from mcstatus.status_response import BedrockStatusResponse, JavaStatusResponse
+
+
+_STATS_CACHE: dict[tuple[str, str], tuple[dict | None, float]] = {}
+CACHE_TTL = 60
 
 
 async def get_server_stats(host: str, server_type: str):
@@ -16,6 +22,12 @@ async def get_server_stats(host: str, server_type: str):
     Returns:
         dict: A dictionary containing the server's status or an error message.
     """
+    key = (host, server_type)
+    now = time.time()
+    cached = _STATS_CACHE.get(key)
+    if cached and now - cached[1] < CACHE_TTL:
+        return cached[0]
+
     response: JavaStatusResponse | BedrockStatusResponse | None = None
     try:
         if server_type == "JAVA":
@@ -26,8 +38,11 @@ async def get_server_stats(host: str, server_type: str):
             logger.error(f"Unsupported server type: {server_type}; host: {host}")
             raise ValueError("Unsupported server type")
 
-        return format_response(response)
+        result = format_response(response)
+        _STATS_CACHE[key] = (result, now)
+        return result
     except Exception:
+        _STATS_CACHE[key] = (None, now)
         return None
 
 
