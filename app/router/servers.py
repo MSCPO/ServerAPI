@@ -10,7 +10,7 @@ from fastapi import (
     status,
 )
 
-from app.services.auth.schemas import jwt_data
+from app.services.auth.schemas import JWTData
 from app.services.servers.crud import (
     AddGalleryImage,
     GetAllPlayersNum,
@@ -83,7 +83,7 @@ async def list_servers(
             status_code=status.HTTP_400_BAD_REQUEST, detail="limit 不能超过 50"
         )
     authorization: str | None = request.headers.get("Authorization")
-    current_user: jwt_data | None = None
+    current_user: JWTData | None = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
         current_user = await get_current_user(token)
@@ -155,7 +155,7 @@ async def get_server(server_id: int, request: Request):
     """
     authorization: str | None = request.headers.get("Authorization")
 
-    current_user: jwt_data | None = None
+    current_user: JWTData | None = None
 
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
@@ -217,7 +217,7 @@ async def get_server(server_id: int, request: Request):
     },
 )
 async def get_server_editor(
-    server_id: int, current_user: jwt_data = Depends(get_current_user)
+    server_id: int, current_user: JWTData = Depends(get_current_user)
 ):
     """
     获取指定 ID 服务器的详细信息（编辑者）。
@@ -258,7 +258,7 @@ async def get_server_editor(
 async def update_server(
     server_id: int,
     update_data: Annotated[UpdateServerRequest, Form()],
-    current_user: jwt_data = Depends(get_current_user),
+    current_user: JWTData = Depends(get_current_user),
 ):
     """
     更新指定 ID 服务器的详细信息（编辑者）。
@@ -358,7 +358,7 @@ async def get_server_gallerys(server_id: int):
 async def add_server_gallerys(
     server_id: int,
     gallery_data: Annotated[AddServerGallerys, Form()],
-    current_user: jwt_data = Depends(get_current_user),
+    current_user: JWTData = Depends(get_current_user),
 ):
     # 获取用户是否有权限编辑该服务器
     await GetServer_by_id_editor(server_id, current_user)
@@ -375,7 +375,7 @@ async def add_server_gallerys(
 async def remove_server_gallerys(
     server_id: int,
     image_id: int,
-    current_user: jwt_data = Depends(get_current_user),
+    current_user: JWTData = Depends(get_current_user),
 ):
     # 获取用户是否有权限编辑该服务器
     await GetServer_by_id_editor(server_id, current_user)

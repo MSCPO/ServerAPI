@@ -24,12 +24,12 @@ from app.services.auth.crud import (
     verify_recaptcha,
 )
 from app.services.auth.schemas import (
-    Auth_Token,
+    AuthToken,
+    JWTData,
     RegisterRequest,
     UserLogin,
-    captchaResponse,
-    jwt_data,
 )
+from app.schemas.common import CaptchaBase, MessageResponse
 from app.services.conn.redis import redis_client
 from app.services.user.crud import get_current_user
 from app.services.user.models import User
@@ -61,7 +61,7 @@ async def get_real_client_ip(request: Request) -> str | None:
 # 用户登录，获取 token
 @router.post(
     "/login",
-    response_model=Auth_Token,
+    response_model=AuthToken,
     summary="Token 获取",
     responses={
         200: {
@@ -116,9 +116,9 @@ async def login(user: UserLogin, request: Request):
 
     # 创建并返回 JWT token
     access_token = create_access_token(
-        data=jwt_data(sub=db_user.username, id=db_user.id)
+        data=JWTData(sub=db_user.username, id=db_user.id)
     )
-    return Auth_Token.model_validate(
+    return AuthToken.model_validate(
         {"access_token": access_token, "token_type": "bearer"}
     )
 
@@ -129,21 +129,17 @@ class recapcha_sitekey(BaseModel):
     )
 
 
-class ReturnResponse(BaseModel):
-    detail: str = Field(..., title="消息", description="状态返回消息")
-
-
-class ReturnResponse_Register(ReturnResponse):
+class RegisterResponse(MessageResponse):
     user_id: int = Field(..., title="用户 ID", description="用户 ID")
 
 
-class Email_Register(captchaResponse):
+class Email_Register(CaptchaBase):
     email: str = Field(..., title="邮箱", description="用户的邮箱")
 
 
 @router.post(
     "/verifyemail",
-    response_model=ReturnResponse,
+    response_model=MessageResponse,
     summary="邮箱注册",
     description="验证邮箱是否存在，若不存在则发送注册邮件（有效期 15 分钟）",
     responses={
@@ -203,7 +199,7 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
     "/verify/{token}",
     summary="邮箱验证",
     description="验证邮箱注册的 Token，若验证成功则将 Token 标记为正在验证（有效期延长至 24 小时）",
-    response_model=ReturnResponse,
+    response_model=MessageResponse,
     responses={
         200: {
             "description": "验证成功",
@@ -231,7 +227,7 @@ from app.log import logger
 
 @router.post(
     "/register",
-    response_model=ReturnResponse_Register,
+    response_model=RegisterResponse,
     summary="注册",
     description="用户注册，验证 Token 后注册用户",
     responses={

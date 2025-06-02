@@ -3,7 +3,7 @@ import random
 
 from fastapi import Depends, HTTPException, status
 
-from app.services.auth.schemas import jwt_data
+from app.services.auth.schemas import JWTData
 from app.services.servers.models import (
     Gallery,
     GalleryImage,
@@ -162,7 +162,7 @@ async def GetServer_by_id(
 
 
 async def GetServer_by_id_editor(
-    server_id: int, current_user: jwt_data = Depends(get_current_user)
+    server_id: int, current_user: JWTData = Depends(get_current_user)
 ) -> GetServerIdShowAPI | None:
     """查看服务器详细信息（详细信息）"""
 

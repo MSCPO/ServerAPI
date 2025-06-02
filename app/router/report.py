@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.services.auth.schemas import jwt_data
+from app.services.auth.schemas import JWTData
 from app.services.report.crud import TicketCRUD
 from app.services.report.schemas import TicketCreateReport
 from app.services.user.crud import get_current_user
@@ -42,7 +42,7 @@ router = APIRouter()
     },
 )
 async def create_report(
-    ticket: TicketCreateReport, current_user: jwt_data = Depends(get_current_user)
+    ticket: TicketCreateReport, current_user: JWTData = Depends(get_current_user)
 ):
     ticket.creator_id = current_user.id
     return await TicketCRUD.create_report_ticket(ticket, ticket.creator_id)

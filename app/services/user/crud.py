@@ -2,14 +2,14 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.services.auth.auth import verify_token
-from app.services.auth.schemas import jwt_data
+from app.services.auth.schemas import JWTData
 from app.services.user.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> jwt_data:
-    payload: jwt_data = jwt_data.model_validate(await verify_token(token))
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> JWTData:
+    payload: JWTData = JWTData.model_validate(await verify_token(token))
 
     user = await User.get_or_none(username=payload.sub)
     if user is None:
