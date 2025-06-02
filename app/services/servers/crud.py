@@ -320,7 +320,10 @@ async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="无法找到关联图库"
         )
-    gallery = await Gallery.get_or_none(id=server.gallery.id)
+    gallery_instance = await server.gallery.first()
+    gallery = (
+        await Gallery.get_or_none(id=gallery_instance.id) if gallery_instance else None
+    )
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="图库不存在")
 

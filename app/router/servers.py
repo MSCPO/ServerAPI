@@ -370,7 +370,7 @@ async def add_server_gallerys(
 @router.delete(
     "/servers/{server_id}/gallerys/{image_id}",
     summary="删除服务器画册图片",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
 )
 async def remove_server_gallerys(
     server_id: int,
