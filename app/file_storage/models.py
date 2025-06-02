@@ -2,7 +2,7 @@ import hashlib
 
 from tortoise import Model, fields
 
-from app.services.conn.db import add_model
+from app.services import add_model
 
 add_model(__name__)
 

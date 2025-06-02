@@ -7,20 +7,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.file_storage.sync import sync_bucket_periodically
-from app.file_storage.cleanup import cleanup_unused_files
+from app.file_storage import cleanup_unused_files, sync_bucket_periodically
 from app.log import logger
-from app.router.auth import router as auth_router
-from app.router.report import router as report_router
-from app.router.search import router as search_router
-from app.router.servers import router as serves_router
-from app.router.user import router as user_router
-from app.router.webhook import router as webhook_router
-from app.services.conn.db import disconnect, init_db
-from app.services.conn.meilisearch import init_meilisearch_index
-from app.services.conn.redis import redis_client
-from app.services.search.sync_index import sync_meilisearch_while
-from app.services.servers.get_stats import query_servers_periodically
+from app.router import (
+    auth_router,
+    report_router,
+    search_router,
+    servers_router,
+    user_router,
+    webhook_router,
+)
+from app.services import disconnect, init_db, init_meilisearch_index, redis_client
+from app.services.search import sync_meilisearch_while
+from app.services.servers import query_servers_periodically
 
 REDIS_LOCK_KEY = "query_servers_lock"
 REDIS_LOCK_TTL = 5
@@ -126,7 +125,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.include_router(serves_router, prefix="/v1", tags=["servers"])
+app.include_router(servers_router, prefix="/v1", tags=["servers"])
 app.include_router(auth_router, prefix="/v1", tags=["auth"])
 app.include_router(webhook_router, tags=["webhook"])
 app.include_router(user_router, prefix="/v1", tags=["user"])

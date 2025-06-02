@@ -30,7 +30,7 @@ from app.services.auth.schemas import (
     captchaResponse,
     jwt_data,
 )
-from app.services.conn.redis import redis_client
+from app.services import redis_client
 from app.services.user.crud import get_current_user
 from app.services.user.models import User
 from app.services.utils import (

@@ -4,7 +4,7 @@ from tortoise import fields
 from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.models import Model
 
-from app.services.conn.db import add_model
+from app.services import add_model
 from app.services.servers.models import Server
 from app.services.user.models import User
 

@@ -2,7 +2,7 @@ import jwt
 
 from app.config import settings
 from app.services.auth.schemas import jwt_data
-from app.services.conn.redis import redis_client
+from app.services import redis_client
 
 
 def create_access_token(data: jwt_data) -> str:

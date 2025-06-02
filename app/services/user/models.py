@@ -4,7 +4,7 @@ from tortoise import fields
 from tortoise.models import Model
 
 from app.file_storage.models import File
-from app.services.conn.db import add_model
+from app.services import add_model
 from app.services.servers.models import Server
 
 add_model(__name__)

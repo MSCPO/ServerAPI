@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 from tortoise import Model, fields
 from tortoise.fields.base import Field
 
-from app.services.conn.db import add_model
+from app.services import add_model
 
 if TYPE_CHECKING:
     from app.file_storage.models import File

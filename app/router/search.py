@@ -1,6 +1,6 @@
 from typing import Any
 from fastapi import APIRouter, Query
-from app.services.conn.meilisearch import client
+from app.services import client
 from app.config import settings
 
 router = APIRouter()

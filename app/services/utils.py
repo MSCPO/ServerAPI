@@ -20,7 +20,7 @@ from PIL import Image
 
 from app.config import settings
 from app.log import logger
-from app.services.conn.redis import redis_client
+from app.services import redis_client
 
 
 def validate_password(password: str) -> bool:
