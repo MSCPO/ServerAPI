@@ -1,7 +1,5 @@
 import asyncio
 
-from tortoise.signals import post_delete
-
 from app.config import settings
 from app.file_storage.conn import session
 from app.file_storage.models import File
@@ -14,7 +12,6 @@ async def _list_bucket_keys() -> list[str]:
         return [obj.key async for obj in bucket.objects.all()]
 
 
-@post_delete(File)
 async def sync_bucket_with_db() -> None:
     keys = await _list_bucket_keys()
     bucket_paths = {

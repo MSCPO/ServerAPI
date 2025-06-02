@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.file_storage.sync import sync_bucket_periodically
+from app.file_storage.cleanup import cleanup_unused_files
 from app.log import logger
 from app.router.auth import router as auth_router
 from app.router.report import router as report_router
@@ -81,6 +82,7 @@ async def startup(app: FastAPI):
             asyncio.create_task(query_servers_periodically()),
             asyncio.create_task(sync_meilisearch_while()),
             asyncio.create_task(sync_bucket_periodically()),
+            asyncio.create_task(cleanup_unused_files()),
         ]
     else:
         logger.warning("⛔ 另一个进程已持有锁，不启动任务")
