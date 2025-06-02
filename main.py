@@ -7,8 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.file_storage.sync import sync_bucket_periodically
 from app.file_storage.cleanup import cleanup_unused_files
+from app.file_storage.sync import sync_bucket_periodically
 from app.log import logger
 from app.router.auth import router as auth_router
 from app.router.report import router as report_router
@@ -109,19 +109,11 @@ async def startup(app: FastAPI):
     await disconnect()
 
 
-origins = [
-    "https://mscpo.crashvibe.cn",
-    "https://mscpo.1fu.top",
-    "http://localhost:3000",
-    "http://127.0.0.1:3001",
-    "http://0.0.0.0:3000",
-]
-
 app = FastAPI(lifespan=startup)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=origins,  # Allows all origins
+    allow_origins=["*"],  # Allows all origins
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )

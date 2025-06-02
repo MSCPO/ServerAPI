@@ -8,15 +8,15 @@ from app.log import logger
 from app.services.user.models import User
 
 
-RECAPTCHA_VERIFY_URL = "https://recaptcha.net/recaptcha/api/siteverify"
+HCAPTCHA_VERIFY_URL = "https://api.hcaptcha.com/siteverify"
 
 
-async def verify_recaptcha(captcha_response: str) -> bool:
+async def verify_hcaptcha(captcha_response: str) -> bool:
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            RECAPTCHA_VERIFY_URL,
+            HCAPTCHA_VERIFY_URL,
             data={
-                "secret": settings.RECAPTCHA_SECRET_KEY,
+                "secret": settings.HCAPTCHA_SECRET_KEY,
                 "response": captcha_response,
             },
         )

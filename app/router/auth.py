@@ -21,7 +21,7 @@ from app.file_storage.utils import upload_file_to_s3
 from app.services.auth.auth import create_access_token
 from app.services.auth.crud import (
     update_last_login,
-    verify_recaptcha,
+    verify_hcaptcha,
 )
 from app.services.auth.schemas import (
     AuthToken,
@@ -76,10 +76,10 @@ async def get_real_client_ip(request: Request) -> str | None:
             },
         },
         400: {
-            "description": "reCAPTCHA 验证失败",
+            "description": "hCaptcha 验证失败",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Invalid reCAPTCHA response"}
+                    "example": {"detail": "Invalid hCaptcha response"}
                 }
             },
         },
@@ -95,9 +95,9 @@ async def login(user: UserLogin, request: Request):
     """
     用户登录，验证凭证并返回 JWT token
     """
-    if not await verify_recaptcha(user.captcha_response):
+    if not await verify_hcaptcha(user.captcha_response):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reCAPTCHA response"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid hCaptcha response"
         )
     if "@" in user.username_or_email:
         db_user = await User.get_or_none(email=user.username_or_email)
@@ -123,9 +123,9 @@ async def login(user: UserLogin, request: Request):
     )
 
 
-class recapcha_sitekey(BaseModel):
-    recapcha_sitekey: str = Field(
-        ..., title="reCAPTCHA 站点密钥", description="reCAPTCHA 站点密钥"
+class hcaptcha_sitekey(BaseModel):
+    hcaptcha_sitekey: str = Field(
+        ..., title="hCaptcha 站点密钥", description="hCaptcha 站点密钥"
     )
 
 
@@ -159,7 +159,7 @@ class Email_Register(CaptchaBase):
                 "application/json": {
                     "examples": {
                         "邮箱格式错误": {"detail": "邮箱格式错误"},
-                        "无效的 reCAPTCHA 响应": {"detail": "无效的 reCAPTCHA 响应"},
+                        "无效的 hCaptcha 响应": {"detail": "无效的 hCaptcha 响应"},
                     }
                 }
             },
@@ -171,9 +171,9 @@ class Email_Register(CaptchaBase):
     },
 )
 async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks):
-    if not await verify_recaptcha(request.captcha_response):
+    if not await verify_hcaptcha(request.captcha_response):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 reCAPTCHA 响应"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 hCaptcha 响应"
         )
     if await User.get_or_none(email=request.email):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
@@ -263,9 +263,9 @@ from app.log import logger
             },
         },
         422: {
-            "description": "reCAPTCHA 验证失败",
+            "description": "hCaptcha 验证失败",
             "content": {
-                "application/json": {"example": {"detail": "无效的 reCAPTCHA 响应"}}
+                "application/json": {"example": {"detail": "无效的 hCaptcha 响应"}}
             },
         },
         404: {
@@ -299,10 +299,10 @@ async def register(
     logger.info(f"Register request: {request_data}")
     register_data = RegisterRequest(**request_data)
 
-    if not await verify_recaptcha(register_data.captcha_response):
+    if not await verify_hcaptcha(register_data.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="无效的 reCAPTCHA 响应",
+            detail="无效的 hCaptcha 响应",
         )
 
     # 验证密码强度
@@ -408,39 +408,39 @@ async def register(
 
 
 @router.get(
-    "/reCAPTCHA_site_key",
-    summary="reCAPTCHA site-key",
-    response_model=recapcha_sitekey,
+    "/hcaptcha_site_key",
+    summary="hCaptcha site-key",
+    response_model=hcaptcha_sitekey,
     responses={
         200: {
-            "description": "成功获取 reCAPTCHA site-key",
+            "description": "成功获取 hCaptcha site-key",
             "content": {
                 "application/json": {
-                    "example": {"reCAPTCHA_site_key": "your_site_key_here"}
+                    "example": {"hcaptcha_sitekey": "your_site_key_here"}
                 }
             },
         },
         400: {
-            "description": "reCAPTCHA site-key 未配置",
+            "description": "hCaptcha site-key 未配置",
             "content": {
                 "application/json": {
-                    "example": {"detail": "reCAPTCHA site key not configured"}
+                    "example": {"detail": "hCaptcha site key not configured"}
                 }
             },
         },
     },
 )
-def get_reCAPTCHA_site_key():
+def get_hcaptcha_site_key():
     """
-    获取 reCAPTCHA 的站点密钥（site-key）。
+    获取 hCaptcha 的站点密钥（site-key）。
 
-    如果 reCAPTCHA site-key 已配置，返回该 key。若未配置，则返回错误信息。
+    如果 hCaptcha site-key 已配置，返回该 key。若未配置，则返回错误信息。
     """
-    if site_key := settings.RECAPTCHA_SITE_KEY:
-        return recapcha_sitekey(recapcha_sitekey=site_key)
+    if site_key := settings.HCAPTCHA_SITE_KEY:
+        return hcaptcha_sitekey(hcaptcha_sitekey=site_key)
     else:
         return JSONResponse(
-            status_code=400, content={"detail": "reCAPTCHA site key not configured"}
+            status_code=400, content={"detail": "hCaptcha site key not configured"}
         )
 
 

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class CaptchaBase(BaseModel):
     captcha_response: str = Field(
-        ..., title="reCAPTCHA 响应", description="reCAPTCHA 验证码响应"
+        ..., title="hCaptcha 响应", description="hCaptcha 验证码响应"
     )
 
 
