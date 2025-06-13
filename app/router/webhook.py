@@ -61,7 +61,18 @@ async def run_git_pull_and_restart():
     "/webhook",
     summary="GitHub Webhook",
     response_model=dict[str, str],
-    responses={200: {"description": "Success"}},
+    responses={
+        200: {
+            "description": "Success",
+            "content": {"application/json": {"example": {"detail": "success"}}},
+        },
+        400: {
+            "description": "请求无效或签名错误",
+            "content": {
+                "application/json": {"example": {"detail": "Missing signatures"}}
+            },
+        },
+    },
     include_in_schema=False,
 )
 async def handle_webhook(request: Request):

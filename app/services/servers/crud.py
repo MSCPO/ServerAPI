@@ -20,14 +20,20 @@ from app.services.servers.schemas import (
     Motd,
     ServerFilter,
     ServerTotalPlayers,
+    UpdateServerRequest,
     UserBase,
 )
 from app.services.servers.utils import (
     get_server_cover_url,
     get_server_gallerys_urls,
+    validate_and_upload_cover,
     validate_and_upload_gallery,
     validate_description,
+    validate_ip,
+    validate_link,
     validate_name,
+    validate_tags,
+    validate_version,
 )
 from app.services.user.crud import get_current_user
 from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
@@ -347,3 +353,44 @@ async def GetAllPlayersNum() -> ServerTotalPlayers:
             if server_status and server_status.stat_data
         )
     )
+
+
+# 新增 update_server_by_id 方法，封装原有 update_server 逻辑
+
+
+async def update_server_by_id(
+    server_id: int, update_data: UpdateServerRequest, current_user: JWTData
+):
+    from fastapi import HTTPException, status
+
+    from app.services.servers.crud import GetServer_by_id_editor
+    from app.services.servers.models import Server
+    from app.services.user.models import User
+
+    await GetServer_by_id_editor(server_id, current_user)
+    server = await Server.get_or_none(id=server_id)
+    if not server:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
+        )
+    if not update_data.name and not update_data.ip and not update_data.desc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="更新字段不能为空"
+        )
+    await validate_name(update_data.name)
+    await validate_description(update_data.desc)
+    await validate_tags(update_data.tags)
+    await validate_ip(update_data.ip, server.type)
+    await validate_version(update_data.version)
+    await validate_link(update_data.link)
+    if update_data.cover:
+        cover_hash = await validate_and_upload_cover(update_data.cover)
+        server.cover_hash = cover_hash
+    server.name = update_data.name
+    server.ip = update_data.ip
+    server.desc = update_data.desc
+    server.tags = update_data.tags
+    server.version = update_data.version
+    server.link = update_data.link
+    await server.save_with_user(await User.get(id=current_user.id))
+    return await GetServer_by_id_editor(server_id, current_user)

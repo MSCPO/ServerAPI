@@ -1,13 +1,39 @@
 from typing import Any
+
 from fastapi import APIRouter, Query
-from app.services.conn.meilisearch import client
+
 from app.config import settings
+from app.services.conn.meilisearch import client
 
 router = APIRouter()
 
 
-@router.get("/search", tags=["search"]
-            )
+@router.get(
+    "/search",
+    tags=["search"],
+    responses={
+        200: {
+            "description": "搜索成功",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "results": [
+                            {
+                                "id": 2,
+                                "name": "服务器名称",
+                                "desc": "描述内容",
+                                "ip": "example.com:37581",
+                                "type": "BEDROCK",
+                                "is_member": True,
+                                "tags": ["生存", "建筑"],
+                            }
+                        ]
+                    }
+                }
+            },
+        }
+    },
+)
 async def search_servers(
     query: str = Query(..., description="搜索关键词"),
     limit: int = Query(10, description="返回条数"),

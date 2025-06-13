@@ -20,8 +20,8 @@ from app.services.servers.crud import (
     GetServerOwners_by_id,
     GetServers,
     RemoveGalleryImage,
+    update_server_by_id,
 )
-from app.services.servers.models import Server
 from app.services.servers.schemas import (
     AddServerGallerys,
     GetServerGallerys,
@@ -32,17 +32,7 @@ from app.services.servers.schemas import (
     ServerTotalPlayers,
     UpdateServerRequest,
 )
-from app.services.servers.utils import (
-    validate_and_upload_cover,
-    validate_description,
-    validate_ip,
-    validate_link,
-    validate_name,
-    validate_tags,
-    validate_version,
-)
 from app.services.user.crud import get_current_user
-from app.services.user.models import User
 
 router = APIRouter()
 
@@ -55,6 +45,44 @@ router = APIRouter()
     responses={
         200: {
             "description": "成功获取服务器列表",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "server_list": [
+                            {
+                                "id": 2,
+                                "name": "服务器名称",
+                                "ip": "example.com:37581",
+                                "type": "BEDROCK",
+                                "version": "1.21",
+                                "desc": "描述内容",
+                                "link": "https://example.com",
+                                "is_member": True,
+                                "auth_mode": "OFFICIAL",
+                                "tags": ["生存", "建筑", "原汁原味"],
+                                "is_hide": False,
+                                "status": {
+                                    "players": {"online": 0, "max": 15},
+                                    "delay": 59.97,
+                                    "version": "1.21.60",
+                                    "motd": {
+                                        "plain": "服务器名称 2",
+                                        "html": "<p>服务器名称 2</p>",
+                                        "minecraft": "服务器名称 2",
+                                        "ansi": "\u001b[0m 服务器名称 2\u001b[0m",
+                                    },
+                                    "icon": None,
+                                },
+                                "permission": "owner",
+                                "cover_url": "/static/cover.png",
+                            }
+                        ],
+                        "total_member": 1,
+                        "total": 1,
+                        "random_seed": 123456,
+                    }
+                }
+            },
         },
         400: {
             "description": "无效的请求参数",
@@ -128,7 +156,7 @@ async def list_servers(
                         "is_hide": False,
                         "status": {
                             "players": {"online": 0, "max": 15},
-                            "delay": 59.96639499971934,
+                            "delay": 59.97,
                             "version": "1.21.60",
                             "motd": {
                                 "plain": "服务器名称 2",
@@ -138,6 +166,8 @@ async def list_servers(
                             },
                             "icon": None,
                         },
+                        "permission": "guest",
+                        "cover_url": "/static/cover.png",
                     }
                 }
             },
@@ -263,47 +293,8 @@ async def update_server(
     """
     更新指定 ID 服务器的详细信息（编辑者）。
     """
-    # 获取用户是否有权限编辑该服务器
-    await GetServer_by_id_editor(server_id, current_user)
-
-    # 查找服务器
-    server = await Server.get_or_none(id=server_id)
-    if not server:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
-        )
-
-    # 字段校验
-    if not update_data.name and not update_data.ip and not update_data.desc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="更新字段不能为空"
-        )
-
-    await validate_name(update_data.name)
-    await validate_description(update_data.desc)
-    await validate_tags(update_data.tags)
-    await validate_ip(update_data.ip, server.type)
-    await validate_version(update_data.version)
-    await validate_link(update_data.link)
-
-    # 封面文件处理
-    if update_data.cover:
-        cover_hash = await validate_and_upload_cover(update_data.cover)
-        server.cover_hash = cover_hash  # 更新封面哈希值
-
-    # 只更新允许的字段
-    server.name = update_data.name
-    server.ip = update_data.ip
-    server.desc = update_data.desc
-    server.tags = update_data.tags
-    server.version = update_data.version
-    server.link = update_data.link
-
-    # 保存更新后的服务器信息
-    await server.save_with_user(await User.get(id=current_user.id))
-
-    # 返回更新后的服务器信息
-    return await GetServer_by_id_editor(server_id, current_user)
+    # 直接调用封装后的 crud 层方法
+    return await update_server_by_id(server_id, update_data, current_user)
 
 
 # 返回这个服务器的所有管理人员
@@ -311,9 +302,34 @@ async def update_server(
     "/servers/{server_id}/managers",
     response_model=GetServerManagers,
     summary="获取服务器的所有管理人员",
+    response_description="成功获取服务器的所有管理人员",
     responses={
         200: {
             "description": "成功获取服务器的所有管理人员",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "owners": [
+                            {
+                                "id": 1,
+                                "display_name": "服主A",
+                                "role": "owner",
+                                "is_active": True,
+                                "avatar_url": "/static/avatar1.png",
+                            }
+                        ],
+                        "admins": [
+                            {
+                                "id": 2,
+                                "display_name": "管理员B",
+                                "role": "admin",
+                                "is_active": True,
+                                "avatar_url": "/static/avatar2.png",
+                            }
+                        ],
+                    }
+                }
+            },
         },
         404: {
             "description": "未找到该服务器",
@@ -332,9 +348,32 @@ async def get_server_managers(server_id: int):
     "/servers/{server_id}/gallerys",
     response_model=GetServerGallerys,
     summary="获取服务器的相册",
+    response_description="成功获取服务器的相册",
     responses={
         200: {
             "description": "成功获取服务器的相册",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": 2,
+                        "name": "服务器名称",
+                        "gallerys_url": [
+                            {
+                                "id": 10,
+                                "title": "建筑全景",
+                                "description": "主城鸟瞰图",
+                                "image_url": "/static/gallery1.png",
+                            },
+                            {
+                                "id": 11,
+                                "title": "活动合影",
+                                "description": "周年庆典合影",
+                                "image_url": "/static/gallery2.png",
+                            },
+                        ],
+                    }
+                }
+            },
         },
         404: {
             "description": "未找到该服务器",
@@ -354,13 +393,32 @@ async def get_server_gallerys(server_id: int):
     "/servers/{server_id}/gallerys",
     summary="添加服务器画册图片",
     status_code=status.HTTP_201_CREATED,
+    response_description="成功添加服务器画册图片",
+    responses={
+        201: {
+            "description": "成功添加服务器画册图片",
+            "content": {
+                "application/json": {"example": {"detail": "成功添加服务器画册图片"}}
+            },
+        },
+        401: {
+            "description": "无权限操作",
+            "content": {"application/json": {"example": {"detail": "无权限操作"}}},
+        },
+        404: {
+            "description": "未找到服务器",
+            "content": {"application/json": {"example": {"detail": "未找到该服务器"}}},
+        },
+    },
 )
 async def add_server_gallerys(
     server_id: int,
     gallery_data: Annotated[AddServerGallerys, Form()],
     current_user: JWTData = Depends(get_current_user),
 ):
-    # 获取用户是否有权限编辑该服务器
+    """
+    添加服务器画册图片。
+    """
     await GetServer_by_id_editor(server_id, current_user)
     await AddGalleryImage(server_id, gallery_data)
     return {"detail": "成功添加服务器画册图片"}
@@ -371,13 +429,34 @@ async def add_server_gallerys(
     "/servers/{server_id}/gallerys/{image_id}",
     summary="删除服务器画册图片",
     status_code=status.HTTP_200_OK,
+    response_description="成功删除服务器画册图片",
+    responses={
+        200: {
+            "description": "成功删除服务器画册图片",
+            "content": {
+                "application/json": {"example": {"detail": "成功删除服务器画册图片"}}
+            },
+        },
+        401: {
+            "description": "无权限操作",
+            "content": {"application/json": {"example": {"detail": "无权限操作"}}},
+        },
+        404: {
+            "description": "未找到服务器或图片",
+            "content": {
+                "application/json": {"example": {"detail": "未找到该服务器或图片"}}
+            },
+        },
+    },
 )
 async def remove_server_gallerys(
     server_id: int,
     image_id: int,
     current_user: JWTData = Depends(get_current_user),
 ):
-    # 获取用户是否有权限编辑该服务器
+    """
+    删除服务器画册图片。
+    """
     await GetServer_by_id_editor(server_id, current_user)
     await RemoveGalleryImage(server_id, image_id)
     return {"detail": "成功删除服务器画册图片"}
@@ -388,10 +467,11 @@ async def remove_server_gallerys(
     "/servers/players",
     summary="获取所有服务器玩家总数",
     response_model=ServerTotalPlayers,
+    response_description="成功获取所有服务器玩家总数",
     responses={
         200: {
             "description": "成功获取所有服务器玩家总数",
-            "content": {"application/json": {"example": {"total_players": 100}}},
+            "content": {"application/json": {"example": {"total_players": 1234}}},
         }
     },
 )

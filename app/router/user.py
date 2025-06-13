@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from app.services.user.crud import get_current_user
 from app.services.user.models import User, UserServer
-from app.services.user.schemas import User as UserSchema, UserPublicInfo
+from app.services.user.schemas import User as UserSchema
+from app.services.user.schemas import UserPublicInfo
 from app.services.user.utils import get_user_avatar_url
 
 router = APIRouter()
@@ -18,12 +19,35 @@ router = APIRouter()
     responses={
         200: {
             "description": "成功返回当前用户信息",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": 1,
+                        "username": "testuser",
+                        "email": "test@example.com",
+                        "display_name": "测试用户",
+                        "role": "user",
+                        "is_active": True,
+                        "created_at": "2025-06-14T12:00:00",
+                        "last_login": "2025-06-14T12:00:00",
+                        "last_login_ip": "127.0.0.1",
+                        "avatar_url": "/static/avatar.png",
+                        "servers": [["owner", 2], ["admin", 3]],
+                    }
+                }
+            },
         },
         401: {
             "description": "未授权，缺少或无效的 Bearer token",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Authorization token missing or invalid"}
+                }
+            },
         },
         404: {
             "description": "未找到用户，token 验证通过但未能找到对应的用户",
+            "content": {"application/json": {"example": {"detail": "用户不存在"}}},
         },
     },
 )
@@ -75,8 +99,27 @@ async def get_me(request: Request):
     summary="获取用户公开信息",
     description="根据用户 ID 获取用户的公开基本信息，无需鉴权。",
     responses={
-        200: {"description": "成功返回用户公开信息"},
-        404: {"description": "未找到指定用户"},
+        200: {
+            "description": "成功返回用户公开信息",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": 1,
+                        "display_name": "公开用户",
+                        "role": "user",
+                        "is_active": True,
+                        "avatar_url": "/static/avatar_public.png",
+                        "created_at": "2025-06-14T12:00:00",
+                        "last_login": "2025-06-14T12:00:00",
+                        "servers": [["owner", 2], ["admin", 3]],
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "未找到指定用户",
+            "content": {"application/json": {"example": {"detail": "用户不存在"}}},
+        },
     },
 )
 async def get_user_public_info(user_id: int):

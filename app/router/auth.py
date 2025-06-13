@@ -18,18 +18,15 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.file_storage.utils import upload_file_to_s3
-from app.services.auth.auth import create_access_token
+from app.schemas.common import CaptchaBase, MessageResponse
 from app.services.auth.crud import (
-    update_last_login,
     verify_hcaptcha,
 )
 from app.services.auth.schemas import (
     AuthToken,
-    JWTData,
     RegisterRequest,
     UserLogin,
 )
-from app.schemas.common import CaptchaBase, MessageResponse
 from app.services.conn.redis import redis_client
 from app.services.user.crud import get_current_user
 from app.services.user.models import User
@@ -42,7 +39,6 @@ from app.services.utils import (
     validate_email,
     validate_password,
     validate_username,
-    verify_password,
 )
 
 router = APIRouter()
@@ -69,7 +65,7 @@ async def get_real_client_ip(request: Request) -> str | None:
             "content": {
                 "application/json": {
                     "example": {
-                        "access_token": "your_token_here",
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                         "token_type": "bearer",
                     }
                 }
@@ -78,9 +74,7 @@ async def get_real_client_ip(request: Request) -> str | None:
         400: {
             "description": "hCaptcha 验证失败",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid hCaptcha response"}
-                }
+                "application/json": {"example": {"detail": "Invalid hCaptcha response"}}
             },
         },
         401: {
@@ -95,32 +89,9 @@ async def login(user: UserLogin, request: Request):
     """
     用户登录，验证凭证并返回 JWT token
     """
-    if not await verify_hcaptcha(user.captcha_response):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid hCaptcha response"
-        )
-    if "@" in user.username_or_email:
-        db_user = await User.get_or_none(email=user.username_or_email)
-    else:
-        db_user = await User.get_or_none(username=user.username_or_email)
-    if db_user is None or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
+    from app.services.auth.crud import login_user
 
-    # 获取真实客户端 IP
-    client_ip = await get_real_client_ip(request)
-    if client_ip is not None:
-        await update_last_login(db_user, client_ip)
-
-    # 创建并返回 JWT token
-    access_token = create_access_token(
-        data=JWTData(sub=db_user.username, id=db_user.id)
-    )
-    return AuthToken.model_validate(
-        {"access_token": access_token, "token_type": "bearer"}
-    )
+    return await login_user(user, request)
 
 
 class hcaptcha_sitekey(BaseModel):
@@ -147,9 +118,7 @@ class Email_Register(CaptchaBase):
             "description": "通过验证，发送验证邮箱",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "验证邮件已发送，请查收您的邮箱",
-                    }
+                    "example": {"detail": "验证邮件已发送，请查收您的邮箱"}
                 }
             },
         },
@@ -166,7 +135,7 @@ class Email_Register(CaptchaBase):
         },
         409: {
             "description": "邮箱已存在",
-            "content": {"application/json": {"邮箱已存在": {"detail": "邮箱已存在"}}},
+            "content": {"application/json": {"example": {"detail": "邮箱已存在"}}},
         },
     },
 )
@@ -416,7 +385,9 @@ async def register(
             "description": "成功获取 hCaptcha site-key",
             "content": {
                 "application/json": {
-                    "example": {"hcaptcha_sitekey": "your_site_key_here"}
+                    "example": {
+                        "hcaptcha_sitekey": "10000000-ffff-ffff-ffff-000000000001"
+                    }
                 }
             },
         },

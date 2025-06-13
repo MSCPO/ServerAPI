@@ -26,7 +26,7 @@ router = APIRouter()
                         "reported_user_id": 2002,
                         "report_reason": "发布恶意广告",
                         "priority": 2,
-                        "status": 1,  # PENDING
+                        "status": 1,
                         "created_at": "2025-03-09T00:00:00",
                         "updated_at": "2025-03-09T00:00:00",
                     }
