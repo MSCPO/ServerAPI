@@ -28,7 +28,6 @@ from app.services.auth.schemas import (
     UserLogin,
 )
 from app.services.conn.redis import redis_client
-from app.services.user.crud import get_current_user
 from app.services.user.models import User
 from app.services.utils import (
     convert_to_webp,
@@ -439,15 +438,13 @@ async def logout(request: Request):
     """
     注销当前用户，使 JWT token 失效
     """
-    # 使用 redis 黑名单
-
-    token = request.headers.get("Authorization")
-    if token is None or not token.startswith("Bearer "):
+    # 统一用 request.state.user 认证
+    user = getattr(request.state, "user", None)
+    if user is None or not hasattr(user, "token"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    token = token.split(" ")[1]
-    await get_current_user(token)
+    token = user.token
     await redis_client.setex(f"token:invalid:{token}", 86400, "invalid")
     return {"detail": "注销成功"}

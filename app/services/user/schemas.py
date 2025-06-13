@@ -42,9 +42,6 @@ class UserUpdate(UserBase):
         description="用户的新密码，若更新则提供",
     )
 
-    class Config:
-        from_attributes = True
-
 
 class User(UserBase):
     username: str = Field(
@@ -61,9 +58,6 @@ class User(UserBase):
     servers: list[tuple[SerRoleEnum, int]] = Field(
         [], title="拥有的服务器", description="用户拥有的服务器 ID 列表"
     )
-
-    class Config:
-        from_attributes = True
 
 
 class UserPublicInfo(BaseModel):

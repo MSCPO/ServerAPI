@@ -16,18 +16,15 @@ class Motd(BaseModel):
         from_attributes = True
 
 
-class GalleryBase(BaseModel):
+# 通用图片schema，支持上传和展示
+class GallerySchema(BaseModel):
+    id: int | None = Field(None, title="图片 ID", description="图片的唯一标识符")
     title: str = Field(title="图片标题", description="图片的标题")
     description: str = Field(title="图片描述", description="图片的描述")
-
-
-class Gallery(GalleryBase):
-    id: int = Field(title="图片 ID", description="图片的唯一标识符")
-    image_url: str = Field(title="图片链接", description="图片的链接")
-
-
-class AddServerGallerys(GalleryBase):
-    image: UploadFile = File(title="图片文件", description="上传的图片文件")
+    image_url: str | None = Field(None, title="图片链接", description="图片的链接")
+    image: UploadFile | None = File(
+        None, title="图片文件", description="上传的图片文件"
+    )
 
 
 class GetServerStatusAPI(BaseModel):
@@ -37,7 +34,7 @@ class GetServerStatusAPI(BaseModel):
     delay: float = Field(title="延迟", description="服务器的延迟时间")
     version: str = Field(title="版本", description="服务器的软件版本")
     motd: Motd = Field(title="MOTD", description="服务器的 MOTD 信息")
-    icon: None | str = Field(
+    icon: str | None = Field(
         None, title="服务器图标", description="服务器的图标，若无则为 None"
     )
 
@@ -45,7 +42,8 @@ class GetServerStatusAPI(BaseModel):
         from_attributes = True
 
 
-class GetServer(BaseModel):
+# 服务器基础信息
+class ServerBase(BaseModel):
     id: int = Field(title="服务器 ID", description="服务器的唯一标识符")
     name: str = Field(title="服务器名称", description="服务器的名称")
 
@@ -53,14 +51,12 @@ class GetServer(BaseModel):
         from_attributes = True
 
 
-class GetServerIdShowAPI(GetServer):
-    ip: None | str = Field(
+# 服务器详细信息
+class ServerDetail(ServerBase):
+    ip: str | None = Field(
         None, title="服务器 IP", description="服务器的 IP 地址，若隐藏则为 None"
     )
-    type: str = Field(
-        title="服务器类型",
-        description="服务器所属的类型（例如：Minecraft、World of Warcraft 等）",
-    )
+    type: str = Field(title="服务器类型", description="服务器所属的类型")
     version: str = Field(title="服务器版本", description="服务器运行的版本")
     desc: str = Field(title="服务器描述", description="对服务器的简短描述")
     link: str = Field(title="服务器链接", description="指向服务器详情的链接")
@@ -68,14 +64,10 @@ class GetServerIdShowAPI(GetServer):
         title="是否为成员服务器", description="是否是成员专属服务器"
     )
     auth_mode: str = Field(title="认证模式", description="服务器使用的认证模式")
-    tags: list = Field(
-        title="服务器标签",
-        description="与服务器相关的标签（如：生存、创造、PVP 等）",
+    tags: list[str] = Field(
+        default_factory=list, title="服务器标签", description="与服务器相关的标签"
     )
-    is_hide: bool = Field(
-        title="是否隐藏",
-        description="服务器是否处于隐藏状态，隐藏时部分信息不显示",
-    )
+    is_hide: bool = Field(title="是否隐藏", description="服务器是否处于隐藏状态")
     status: GetServerStatusAPI | None = Field(
         None, title="服务器状态", description="显示服务器的在线状态信息"
     )
@@ -88,21 +80,17 @@ class GetServerIdShowAPI(GetServer):
         description="服务器的封面图片链接",
     )
 
-    class Config:
-        from_attributes = True
 
-
-class GetServerGallerys(GetServer):
-    gallerys_url: list[Gallery] = Field(
+# 服务器相册
+class ServerGallery(ServerBase):
+    gallerys_url: list[GallerySchema] = Field(
         title="服务器相册", description="服务器的相册图片链接"
     )
 
-    class Config:
-        from_attributes = True
 
-
-class GetServerShowAPI(BaseModel):
-    server_list: list[GetServerIdShowAPI] = Field(
+# 服务器列表
+class ServerList(BaseModel):
+    server_list: list[ServerDetail] = Field(
         title="服务器列表", description="显示所有的服务器列表"
     )
     total_member: int = Field(
@@ -113,19 +101,14 @@ class GetServerShowAPI(BaseModel):
         None, title="随机种子", description="本次随机的随机种子，固定分页用"
     )  # 随机种子
 
-    class Config:
-        from_attributes = True
-
 
 class ServerFilter(BaseModel):
     is_member: bool = Field(
-        True,
-        title="是否为成员服务器",
-        description="是否是成员专属服务器",
+        True, title="是否为成员服务器", description="是否是成员专属服务器"
     )
     modes: str | None = Field(None, title="模式", description="服务器模式筛选")
     authModes: list[str] = Field(
-        ["OFFLINE", "YGGDRASIL", "OFFICIAL"],
+        default_factory=lambda: ["OFFLINE", "YGGDRASIL", "OFFICIAL"],
         title="认证模式",
         description="服务器认证模式筛选",
     )
@@ -138,10 +121,7 @@ class UpdateServerRequest(BaseModel):
     name: str = Field(title="服务器名称", description="服务器的名称")
     ip: str = Field(title="服务器 IP", description="服务器的 IP 地址")
     desc: str = Field(title="服务器描述", description="对服务器的简短描述")
-    tags: list[str] = Field(
-        title="服务器标签",
-        description="与服务器相关的标签（如：生存、创造、PVP 等）",
-    )
+    tags: list[str] = Field(title="服务器标签", description="与服务器相关的标签")
     version: str = Field(title="服务器版本", description="服务器运行的版本")
     link: str = Field(title="服务器链接", description="指向服务器详情的链接")
     cover: UploadFile | None = File(
@@ -149,7 +129,6 @@ class UpdateServerRequest(BaseModel):
     )
 
 
-# 返回一个服务器的所有主人
 class GetServerManagers(BaseModel):
     owners: list[UserBase] = Field(title="服务器主人", description="服务器的所有主人")
     admins: list[UserBase] = Field(

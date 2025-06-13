@@ -1,7 +1,7 @@
 import asyncio
 import random
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 from app.services.auth.schemas import JWTData
 from app.services.servers.models import (
@@ -11,14 +11,14 @@ from app.services.servers.models import (
     ServerStatus,
 )
 from app.services.servers.schemas import (
-    AddServerGallerys,
-    GetServerGallerys,
-    GetServerIdShowAPI,
+    GallerySchema,
     GetServerManagers,
-    GetServerShowAPI,
     GetServerStatusAPI,
     Motd,
+    ServerDetail,
     ServerFilter,
+    ServerGallery,
+    ServerList,
     ServerTotalPlayers,
     UpdateServerRequest,
     UserBase,
@@ -35,11 +35,11 @@ from app.services.servers.utils import (
     validate_tags,
     validate_version,
 )
-from app.services.user.crud import get_current_user
 from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
 from app.services.user.utils import get_user_avatar_url
 
 
+# 1. GetServers 返回 ServerList
 async def GetServers(
     filter: ServerFilter,
     limit: int | None = None,
@@ -47,7 +47,7 @@ async def GetServers(
     is_random: bool = True,
     seed: int | None = None,
     user: int | None = None,
-) -> GetServerShowAPI:
+) -> ServerList:
     # 并发查询服务器总数和成员数
     total_member = await Server.filter(is_member=True).count()
     query = Server.all()
@@ -93,7 +93,7 @@ async def GetServers(
     if limit is not None:
         server_list = server_list[:limit]
 
-    return GetServerShowAPI(
+    return ServerList(
         server_list=server_list,
         total_member=total_member,
         total=total_servers,
@@ -101,9 +101,8 @@ async def GetServers(
     )
 
 
-async def GetServer_by_id(
-    server_id: int, user: int | None
-) -> None | GetServerIdShowAPI:
+# 2. GetServer_by_id 返回 ServerDetail
+async def GetServer_by_id(server_id: int, user: int | None) -> None | ServerDetail:
     # 查询服务器是否存在，不存在直接返回 None
     server = await Server.get_or_none(id=server_id)
     if not server:
@@ -149,7 +148,7 @@ async def GetServer_by_id(
             icon=stat_data["icon"],
         )
 
-    return GetServerIdShowAPI(
+    return ServerDetail(
         id=server.id,
         name=server.name,
         ip=None if server.is_hide else server.ip,
@@ -167,9 +166,8 @@ async def GetServer_by_id(
     )
 
 
-async def GetServer_by_id_editor(
-    server_id: int, current_user: JWTData = Depends(get_current_user)
-) -> GetServerIdShowAPI | None:
+# 3. GetServer_by_id_editor 返回 ServerDetail
+async def GetServer_by_id_editor(server_id: int, current_user) -> ServerDetail | None:
     """查看服务器详细信息（详细信息）"""
 
     # 并发查询服务器和当前用户在该服务器中的角色
@@ -223,7 +221,7 @@ async def GetServer_by_id_editor(
             icon=stat_data["icon"],
         )
 
-    return GetServerIdShowAPI(
+    return ServerDetail(
         id=server.id,
         name=server.name,
         ip=server.ip,
@@ -274,7 +272,8 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
     return GetServerManagers(admins=admins_list, owners=owners_list)
 
 
-async def GetGallerylist(server_id: int) -> GetServerGallerys:
+# 4. GetGallerylist 返回 ServerGallery
+async def GetGallerylist(server_id: int) -> ServerGallery:
     # 查找是否有这个服务器
     server = await Server.get_or_none(id=server_id)
     if not server:
@@ -282,14 +281,15 @@ async def GetGallerylist(server_id: int) -> GetServerGallerys:
             status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
         )
 
-    return GetServerGallerys(
+    return ServerGallery(
         id=server.id,
         name=server.name,
         gallerys_url=await get_server_gallerys_urls(server),
     )
 
 
-async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
+# 5. AddGalleryImage 参数类型 GallerySchema
+async def AddGalleryImage(server_id, gallery_data: GallerySchema) -> None:
     # 查找是否有这个服务器
     server = await Server.get_or_none(id=server_id)
     if not server:
@@ -304,6 +304,10 @@ async def AddGalleryImage(server_id, gallery_data: AddServerGallerys) -> None:
     await validate_name(gallery_data.title)
     await validate_description(gallery_data.description, min=3)
     # 创建图片
+    if not isinstance(gallery_data.image, UploadFile):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="图片文件不能为空"
+        )
     image_hash = await validate_and_upload_gallery(gallery_data.image)
     await GalleryImage.create(
         title=gallery_data.title,

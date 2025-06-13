@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from app.core.auth_middleware import AuthMiddleware
 from app.file_storage.cleanup import cleanup_unused_files
 from app.file_storage.sync import sync_bucket_periodically
 from app.log import logger
@@ -117,6 +118,8 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+app.add_middleware(AuthMiddleware)
 
 app.include_router(serves_router, prefix="/v1", tags=["servers"])
 app.include_router(auth_router, prefix="/v1", tags=["auth"])

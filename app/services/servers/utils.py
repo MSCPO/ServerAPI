@@ -8,7 +8,7 @@ from app.file_storage.models import File
 from app.file_storage.utils import upload_file_to_s3
 from app.services.servers.stats_utils import get_server_stats
 from app.services.servers.models import GalleryImage, Server
-from app.services.servers.schemas import Gallery
+from app.services.servers.schemas import GallerySchema
 from app.services.utils import convert_to_webp
 
 
@@ -20,13 +20,13 @@ async def get_server_cover_url(server_data: Server) -> str | None:
     return file_instance.file_path
 
 
-async def get_server_gallerys_urls(server_data: Server) -> list[Gallery]:
+async def get_server_gallerys_urls(server_data: Server) -> list[GallerySchema]:
     """获取服务器图库 URL 列表"""
     if not server_data.gallery:
         return []
     gallery = await server_data.gallery
     return [
-        Gallery(
+        GallerySchema(
             id=image.id,
             title=image.title,
             description=image.description,

@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import (
     APIRouter,
-    Depends,
     Form,
     HTTPException,
     Query,
@@ -10,7 +9,6 @@ from fastapi import (
     status,
 )
 
-from app.services.auth.schemas import JWTData
 from app.services.servers.crud import (
     AddGalleryImage,
     GetAllPlayersNum,
@@ -23,16 +21,15 @@ from app.services.servers.crud import (
     update_server_by_id,
 )
 from app.services.servers.schemas import (
-    AddServerGallerys,
-    GetServerGallerys,
-    GetServerIdShowAPI,
+    GallerySchema,
     GetServerManagers,
-    GetServerShowAPI,
+    ServerDetail,
     ServerFilter,
+    ServerGallery,
+    ServerList,
     ServerTotalPlayers,
     UpdateServerRequest,
 )
-from app.services.user.crud import get_current_user
 
 router = APIRouter()
 
@@ -40,7 +37,7 @@ router = APIRouter()
 # 获取服务器列表
 @router.get(
     "/servers",
-    response_model=GetServerShowAPI,
+    response_model=ServerList,
     summary="获取服务器列表",
     responses={
         200: {
@@ -110,12 +107,7 @@ async def list_servers(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="limit 不能超过 50"
         )
-    authorization: str | None = request.headers.get("Authorization")
-    current_user: JWTData | None = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        current_user = await get_current_user(token)
-    user = current_user.id if current_user else None
+    user = request.state.user.id if request.state.user else None
     filter = ServerFilter(
         is_member=is_member,
         modes=modes,
@@ -135,7 +127,7 @@ async def list_servers(
 # 获取服务器的具体信息
 @router.get(
     "/servers/info/{server_id}",
-    response_model=GetServerIdShowAPI,
+    response_model=ServerDetail,
     summary="获取对应服务器具体信息",
     responses={
         200: {
@@ -183,14 +175,7 @@ async def get_server(server_id: int, request: Request):
     获取指定 ID 服务器的详细信息。
 
     """
-    authorization: str | None = request.headers.get("Authorization")
-
-    current_user: JWTData | None = None
-
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        current_user = await get_current_user(token)
-    user = current_user.id if current_user else None
+    user = request.state.user.id if request.state.user else None
     server = await GetServer_by_id(server_id, user)
     if server is None:
         raise HTTPException(
@@ -201,7 +186,7 @@ async def get_server(server_id: int, request: Request):
 
 @router.get(
     "/servers/{server_id}/editor",
-    response_model=GetServerIdShowAPI,
+    response_model=ServerDetail,
     summary="获取对应服务器具体信息（编辑者）",
     responses={
         200: {
@@ -236,22 +221,17 @@ async def get_server(server_id: int, request: Request):
                 }
             },
         },
-        401: {
-            "description": "没权限编辑该服务器",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "你咩有权限编辑它！它拒绝了你！"}
-                }
-            },
+        404: {
+            "description": "未找到该服务器",
+            "content": {"application/json": {"example": {"detail": "未找到该服务器"}}},
         },
     },
 )
-async def get_server_editor(
-    server_id: int, current_user: JWTData = Depends(get_current_user)
-):
+async def get_server_editor(server_id: int, request: Request):
     """
     获取指定 ID 服务器的详细信息（编辑者）。
     """
+    current_user = request.state.user
     if server := await GetServer_by_id_editor(server_id, current_user):
         return server
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器")
@@ -259,7 +239,7 @@ async def get_server_editor(
 
 @router.put(
     "/servers/{server_id}",
-    response_model=GetServerIdShowAPI,
+    response_model=ServerDetail,
     summary="更新对应服务器具体信息",
     responses={
         200: {
@@ -288,12 +268,12 @@ async def get_server_editor(
 async def update_server(
     server_id: int,
     update_data: Annotated[UpdateServerRequest, Form()],
-    current_user: JWTData = Depends(get_current_user),
+    request: Request,
 ):
     """
     更新指定 ID 服务器的详细信息（编辑者）。
     """
-    # 直接调用封装后的 crud 层方法
+    current_user = request.state.user
     return await update_server_by_id(server_id, update_data, current_user)
 
 
@@ -346,7 +326,7 @@ async def get_server_managers(server_id: int):
 
 @router.get(
     "/servers/{server_id}/gallerys",
-    response_model=GetServerGallerys,
+    response_model=ServerGallery,
     summary="获取服务器的相册",
     response_description="成功获取服务器的相册",
     responses={
@@ -413,12 +393,13 @@ async def get_server_gallerys(server_id: int):
 )
 async def add_server_gallerys(
     server_id: int,
-    gallery_data: Annotated[AddServerGallerys, Form()],
-    current_user: JWTData = Depends(get_current_user),
+    gallery_data: Annotated[GallerySchema, Form()],
+    request: Request,
 ):
     """
     添加服务器画册图片。
     """
+    current_user = request.state.user
     await GetServer_by_id_editor(server_id, current_user)
     await AddGalleryImage(server_id, gallery_data)
     return {"detail": "成功添加服务器画册图片"}
@@ -452,11 +433,12 @@ async def add_server_gallerys(
 async def remove_server_gallerys(
     server_id: int,
     image_id: int,
-    current_user: JWTData = Depends(get_current_user),
+    request: Request,
 ):
     """
     删除服务器画册图片。
     """
+    current_user = request.state.user
     await GetServer_by_id_editor(server_id, current_user)
     await RemoveGalleryImage(server_id, image_id)
     return {"detail": "成功删除服务器画册图片"}

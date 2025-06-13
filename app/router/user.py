@@ -2,7 +2,6 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, Request, status
 
-from app.services.user.crud import get_current_user
 from app.services.user.models import User, UserServer
 from app.services.user.schemas import User as UserSchema
 from app.services.user.schemas import UserPublicInfo
@@ -55,19 +54,14 @@ async def get_me(request: Request):
     """
     获取当前登录用户的详细信息
     """
-    # 提取并验证 Bearer token
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    user = getattr(request.state, "user", None)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization token missing or invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = auth_header.split(" ")[1]
-
-    # 获取当前用户信息
-    current_user = await get_current_user(token)
-    user_data: User = await User.get(id=current_user.id)
+    user_data: User = await User.get(id=user.id)
 
     # 并发获取头像和用户服务器数据
     avatar_task = get_user_avatar_url(user_data)
