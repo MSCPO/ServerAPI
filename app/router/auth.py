@@ -239,13 +239,7 @@ async def verify_code(code: str):
         )
     
     # 获取验证码数据
-    verify_data_str: str = await redis_client.get(f"verify_code:{code}")
-    if verify_data_str is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="验证码无效或已过期"
-        )
-    
-    verify_data: dict = json.loads(verify_data_str)
+    verify_data = await get_code_data(code)
     
     # 更新验证码状态为已验证，延长有效期至24小时
     await redis_client.setex(
