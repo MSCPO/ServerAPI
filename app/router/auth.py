@@ -8,6 +8,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
@@ -32,9 +33,12 @@ from app.services.user.models import User
 from app.services.utils import (
     convert_to_webp,
     generate_token,
+    generate_verification_code,
+    get_code_data,
     get_token_data,
     hash_password,
     send_verification_email,
+    send_verification_code_email,
     validate_email,
     validate_password,
     validate_username,
@@ -111,13 +115,16 @@ class Email_Register(CaptchaBase):
     "/verifyemail",
     response_model=MessageResponse,
     summary="邮箱注册",
-    description="验证邮箱是否存在，若不存在则发送注册邮件（有效期 15 分钟）",
+    description="验证邮箱是否存在，若不存在则发送注册邮件（有效期 15 分钟）或发送验证码（当 by=code 时）",
     responses={
         200: {
-            "description": "通过验证，发送验证邮箱",
+            "description": "通过验证，发送验证邮箱或验证码",
             "content": {
                 "application/json": {
-                    "example": {"detail": "验证邮件已发送，请查收您的邮箱"}
+                    "examples": {
+                        "邮件发送成功": {"detail": "验证邮件已发送，请查收您的邮箱"},
+                        "验证码发送成功": {"detail": "验证码已发送，请查收您的邮箱"}
+                    }
                 }
             },
         },
@@ -138,7 +145,7 @@ class Email_Register(CaptchaBase):
         },
     },
 )
-async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks):
+async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks, by: str | None = Query(None)):
     if not await verify_hcaptcha(request.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 hCaptcha 响应"
@@ -151,16 +158,30 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
             status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式错误"
         )
 
-    token = generate_token()
-    # 检擦 token 是否有重复
-    while await redis_client.get(f"verify:{token}"):
-        token = generate_token()
+    if by == "code":
+        # 生成6位数验证码
+        code = generate_verification_code()
+        # 检查验证码是否有重复
+        while await redis_client.get(f"verify_code:{code}"):
+            code = generate_verification_code()
 
-    await redis_client.setex(
-        f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
-    )
-    background_tasks.add_task(send_verification_email, request.email, token)
-    return {"detail": "验证邮件已发送，请查收您的邮箱"}
+        await redis_client.setex(
+            f"verify_code:{code}", 900, json.dumps({"email": request.email, "verified": False})
+        )
+        background_tasks.add_task(send_verification_code_email, request.email, code)
+        return {"detail": "验证码已发送，请查收您的邮箱"}
+    else:
+        # 原有的token验证逻辑
+        token = generate_token()
+        # 检擦 token 是否有重复
+        while await redis_client.get(f"verify:{token}"):
+            token = generate_token()
+
+        await redis_client.setex(
+            f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
+        )
+        background_tasks.add_task(send_verification_email, request.email, token)
+        return {"detail": "验证邮件已发送，请查收您的邮箱"}
 
 
 @router.post(
@@ -188,6 +209,52 @@ async def verify(token: str):
     )
 
     return {"detail": "Token 验证成功"}
+
+
+@router.post(
+    "/verify/code/{code}",
+    summary="验证码验证",
+    description="验证邮箱注册的 6 位数验证码，若验证成功则将验证码标记为已验证（有效期延长至 24 小时）",
+    response_model=MessageResponse,
+    responses={
+        200: {
+            "description": "验证成功",
+            "content": {"application/json": {"example": {"detail": "验证码验证成功"}}},
+        },
+        404: {
+            "description": "验证码未找到或已过期",
+            "content": {"application/json": {"example": {"detail": "验证码无效或已过期"}}},
+        },
+        400: {
+            "description": "验证码格式错误",
+            "content": {"application/json": {"example": {"detail": "验证码必须是6位数字"}}},
+        },
+    },
+)
+async def verify_code(code: str):
+    # 验证码格式检查
+    if not code.isdigit() or len(code) != 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
+        )
+    
+    # 获取验证码数据
+    verify_data_str: str = await redis_client.get(f"verify_code:{code}")
+    if verify_data_str is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="验证码无效或已过期"
+        )
+    
+    verify_data: dict = json.loads(verify_data_str)
+    
+    # 更新验证码状态为已验证，延长有效期至24小时
+    await redis_client.setex(
+        f"verify_code:{code}",
+        86400,
+        json.dumps({"email": verify_data["email"], "verified": True}),
+    )
+
+    return {"detail": "验证码验证成功"}
 
 
 from app.log import logger
@@ -280,15 +347,37 @@ async def register(
             detail="密码必须 8～16 个字符，并包含至少一个数字、一个大写字母",
         )
 
-    # 验证 Token
-    verify_data = await get_token_data(register_data.token)
-    if verify_data is None:
+    # 验证 Token 或验证码
+    if register_data.token:
+        # 使用 Token 验证
+        verify_data = await get_token_data(register_data.token)
+        if verify_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
+            )
+        if not verify_data["verified"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Token 未被验证"
+            )
+    elif register_data.code:
+        # 使用验证码验证
+        if not register_data.code.isdigit() or len(register_data.code) != 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
+            )
+        verify_data = await get_code_data(register_data.code)
+        if verify_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="验证码无效或已过期"
+            )
+        if not verify_data["verified"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="验证码未被验证"
+            )
+    else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
-        )
-    if not verify_data["verified"]:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Token 未被验证"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="必须提供验证令牌或验证码"
         )
     # 检查数据库中是否存在该邮箱
     if await User.get_or_none(email=verify_data["email"]):
@@ -369,8 +458,11 @@ async def register(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建用户失败"
         ) from e
 
-    # 删除 token
-    await redis_client.delete(f"verify:{register_data.token}")
+    # 删除 token 或验证码
+    if register_data.token:
+        await redis_client.delete(f"verify:{register_data.token}")
+    elif register_data.code:
+        await redis_client.delete(f"verify_code:{register_data.code}")
 
     return {"detail": "用户注册成功", "user_id": user.id}
 
