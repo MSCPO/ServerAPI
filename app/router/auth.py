@@ -37,8 +37,8 @@ from app.services.utils import (
     get_code_data,
     get_token_data,
     hash_password,
-    send_verification_email,
     send_verification_code_email,
+    send_verification_email,
     validate_email,
     validate_password,
     validate_username,
@@ -123,7 +123,7 @@ class Email_Register(CaptchaBase):
                 "application/json": {
                     "examples": {
                         "邮件发送成功": {"detail": "验证邮件已发送，请查收您的邮箱"},
-                        "验证码发送成功": {"detail": "验证码已发送，请查收您的邮箱"}
+                        "验证码发送成功": {"detail": "验证码已发送，请查收您的邮箱"},
                     }
                 }
             },
@@ -145,7 +145,11 @@ class Email_Register(CaptchaBase):
         },
     },
 )
-async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks, by: str | None = Query(None)):
+async def verifyemail(
+    request: Email_Register,
+    background_tasks: BackgroundTasks,
+    by: str | None = Query(None),
+):
     if not await verify_hcaptcha(request.captcha_response):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 hCaptcha 响应"
@@ -166,7 +170,9 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
             code = generate_verification_code()
 
         await redis_client.setex(
-            f"verify_code:{code}", 900, json.dumps({"email": request.email, "verified": False})
+            f"verify_code:{code}",
+            900,
+            json.dumps({"email": request.email, "verified": False}),
         )
         background_tasks.add_task(send_verification_code_email, request.email, code)
         return {"detail": "验证码已发送，请查收您的邮箱"}
@@ -178,7 +184,9 @@ async def verifyemail(request: Email_Register, background_tasks: BackgroundTasks
             token = generate_token()
 
         await redis_client.setex(
-            f"verify:{token}", 900, json.dumps({"email": request.email, "verified": False})
+            f"verify:{token}",
+            900,
+            json.dumps({"email": request.email, "verified": False}),
         )
         background_tasks.add_task(send_verification_email, request.email, token)
         return {"detail": "验证邮件已发送，请查收您的邮箱"}
@@ -223,11 +231,15 @@ async def verify(token: str):
         },
         404: {
             "description": "验证码未找到或已过期",
-            "content": {"application/json": {"example": {"detail": "验证码无效或已过期"}}},
+            "content": {
+                "application/json": {"example": {"detail": "验证码无效或已过期"}}
+            },
         },
         400: {
             "description": "验证码格式错误",
-            "content": {"application/json": {"example": {"detail": "验证码必须是6位数字"}}},
+            "content": {
+                "application/json": {"example": {"detail": "验证码必须是6位数字"}}
+            },
         },
     },
 )
@@ -237,10 +249,10 @@ async def verify_code(code: str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
         )
-    
+
     # 获取验证码数据
     verify_data = await get_code_data(code)
-    
+
     # 更新验证码状态为已验证，延长有效期至24小时
     await redis_client.setex(
         f"verify_code:{code}",
@@ -321,11 +333,16 @@ from app.log import logger
     },
 )
 async def register(
-    password: str = Form(..., description="8-16 位密码，至少包含数字、大写字母、小写字母和特殊字符中的两种"),
+    password: str = Form(
+        ...,
+        description="8-16 位密码，至少包含数字、大写字母、小写字母和特殊字符中的两种",
+    ),
     display_name: str = Form(..., description="用户的显示名称，长度为 4-16 位"),
     captcha_response: str = Form(..., description="hCaptcha 验证响应"),
     avatar: UploadFile = File(..., description="用户头像文件"),
-    token: str | None = Form(None, description="用户注册的验证令牌（使用邮件链接验证时）"),
+    token: str | None = Form(
+        None, description="用户注册的验证令牌（使用邮件链接验证时）"
+    ),
     code: str | None = Form(None, description="6位数字验证码（使用验证码验证时）"),
 ):
     register_data = RegisterRequest(
@@ -333,7 +350,7 @@ async def register(
         display_name=display_name,
         token=token,
         code=code,
-        captcha_response=captcha_response
+        captcha_response=captcha_response,
     )
     logger.info(f"Register request: {register_data.model_dump()}")
 
@@ -375,8 +392,7 @@ async def register(
             )
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="必须提供验证令牌或验证码"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="必须提供验证令牌或验证码"
         )
     # 检查数据库中是否存在该邮箱
     if await User.get_or_none(email=verify_data["email"]):
