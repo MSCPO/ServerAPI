@@ -38,8 +38,69 @@ from app.services.servers.utils import (
 from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
 from app.services.user.utils import get_user_avatar_url
 
+# 简单的内存缓存用于减少重复查询
+_server_cache = {}
+_cache_ttl = 60  # 缓存60秒
 
-# 1. GetServers 返回 ServerList
+
+def _get_cache_key(prefix: str, *args) -> str:
+    """生成缓存键"""
+    return f"{prefix}:{':'.join(str(arg) for arg in args)}"
+
+
+def _is_cache_valid(timestamp: float) -> bool:
+    """检查缓存是否有效"""
+    import time
+
+    return time.time() - timestamp < _cache_ttl
+
+
+def _get_cached_data(key: str):
+    """获取缓存数据"""
+    if key in _server_cache:
+        data, timestamp = _server_cache[key]
+        if _is_cache_valid(timestamp):
+            return data
+        else:
+            del _server_cache[key]
+    return None
+
+
+def _set_cached_data(key: str, data):
+    """设置缓存数据"""
+    import time
+
+    _server_cache[key] = (data, time.time())
+
+
+# 性能优化: 添加数据库查询缓存清理函数
+def clear_server_cache():
+    """清理服务器缓存"""
+    global _server_cache
+    _server_cache.clear()
+
+
+# 性能优化: 批量预热缓存
+async def warmup_cache(server_ids: list[int]):
+    """预热服务器缓存"""
+    servers = await Server.filter(id__in=server_ids).prefetch_related("cover_hash")
+    statuses = await ServerStatus.filter(server_id__in=server_ids).order_by("-timestamp").prefetch_related("server")
+
+    # 为每个服务器创建状态映射
+    status_map = {}
+    for server_status in statuses:
+        # 使用预加载的 server 关系
+        server_id = server_status.server.id
+        if server_id not in status_map:
+            status_map[server_id] = server_status
+
+    # 缓存数据
+    for server in servers:
+        cache_key = _get_cache_key("server_basic", server.id)
+        server_status = status_map.get(server.id)
+        _set_cached_data(cache_key, (server, server_status))
+
+
 async def GetServers(
     filter: ServerFilter,
     limit: int | None = None,
@@ -49,8 +110,10 @@ async def GetServers(
     user: int | None = None,
 ) -> ServerList:
     # 并发查询服务器总数和成员数
-    total_member = await Server.filter(is_member=True).count()
-    query = Server.all()
+    total_member_task = Server.filter(is_member=True).count()
+
+    # 构建查询，预取相关数据以减少查询次数
+    query = Server.all().prefetch_related("cover_hash")
 
     # 应用过滤条件
     if filter.is_member:
@@ -68,8 +131,8 @@ async def GetServers(
         for tag in filter.tags:
             query = query.filter(tags__contains=tag)
 
-    # 获取过滤后的服务器
-    all_servers = await query
+    # 并发获取过滤后的服务器和成员总数
+    all_servers, total_member = await asyncio.gather(query, total_member_task)
 
     # 随机排序
     if is_random:
@@ -78,14 +141,92 @@ async def GetServers(
         random.seed(seed)
         random.shuffle(all_servers)
 
-    # 并发获取所有服务器的详情
-    tasks = [GetServer_by_id(server.id, user) for server in all_servers]
-    server_info_list = await asyncio.gather(*tasks)
-    server_list = [info for info in server_info_list if info is not None]
+    # 批量获取用户权限信息和服务器状态
+    user_servers_map = {}
+    user_info = None
+    server_statuses_map = {}
+
+    if user:
+        user_info = await User.get_or_none(id=user)
+        server_ids = [server.id for server in all_servers]
+        user_servers = await UserServer.filter(
+            user=user, server_id__in=server_ids
+        ).prefetch_related("server")
+        user_servers_map = {us.server.id: us.role for us in user_servers}
+
+    # 批量获取服务器状态
+    if all_servers:
+        server_ids = [server.id for server in all_servers]
+        server_statuses = (
+            await ServerStatus.filter(server_id__in=server_ids)
+            .prefetch_related("server")
+            .order_by("-timestamp")
+        )
+        # 创建服务器ID到最新状态的映射
+        for status in server_statuses:
+            if status.server.id not in server_statuses_map:
+                server_statuses_map[status.server.id] = status
+
+    # 批量处理服务器详情，避免N+1查询
+    server_list = []
+    cover_url_tasks = []
+
+    for server in all_servers:
+        # 确定用户权限
+        permission = (
+            SerRoleEnum.owner
+            if user_info and user_info.role == "admin"
+            else user_servers_map.get(server.id, "guest")
+        )
+
+        # 处理服务器状态
+        status_data = None
+        server_status = server_statuses_map.get(server.id)
+        if server_status and server_status.stat_data:
+            stat_data = server_status.stat_data
+            status_data = GetServerStatusAPI(
+                players=stat_data["players"],
+                delay=stat_data["delay"],
+                version=stat_data["version"],
+                motd=Motd(
+                    plain=stat_data["motd"]["plain"],
+                    html=stat_data["motd"]["html"],
+                    minecraft=stat_data["motd"]["minecraft"],
+                    ansi=stat_data["motd"]["ansi"],
+                ),
+                icon=stat_data["icon"],
+            )
+
+        # 准备封面URL任务
+        cover_url_tasks.append(get_server_cover_url(server))
+
+        server_detail = ServerDetail(
+            id=server.id,
+            name=server.name,
+            ip=None if server.is_hide else server.ip,
+            type=server.type,
+            version=server.version,
+            desc=server.desc,
+            link=server.link,
+            is_member=server.is_member,
+            auth_mode=server.auth_mode,
+            tags=server.tags,
+            is_hide=server.is_hide,
+            status=status_data,
+            permission=permission,
+            cover_url=None,  # 稍后批量设置
+        )
+        server_list.append(server_detail)
+
+    # 批量获取封面URL
+    if cover_url_tasks:
+        cover_urls = await asyncio.gather(*cover_url_tasks)
+        for i, cover_url in enumerate(cover_urls):
+            server_list[i].cover_url = cover_url
 
     total_servers = len(server_list)
 
-    # 将有info.status的排在前面，没有info.status的排在后面
+    # 根据状态排序
     server_list.sort(key=lambda x: x.status is None)
 
     # 应用分页
@@ -103,28 +244,38 @@ async def GetServers(
 
 # 2. GetServer_by_id 返回 ServerDetail
 async def GetServer_by_id(server_id: int, user: int | None) -> None | ServerDetail:
-    # 查询服务器是否存在，不存在直接返回 None
-    server = await Server.get_or_none(id=server_id)
-    if not server:
-        return None
+    # 检查缓存（仅对没有用户特定信息的基础数据进行缓存）
+    cache_key = _get_cache_key("server_basic", server_id)
 
-    # 并发查询服务器状态和用户权限（user_server）
-    server_status_task = ServerStatus.get_or_none(server=server)
+    if cached_server_data := _get_cached_data(cache_key):
+        server, server_status = cached_server_data
+    else:
+        # 查询服务器是否存在，预取封面信息
+        server = await Server.get_or_none(id=server_id).prefetch_related("cover_hash")
+        if not server:
+            return None
+
+        # 获取最新的服务器状态
+        server_status = (
+            await ServerStatus.filter(server=server).order_by("-timestamp").first()
+        )
+
+        # 缓存基础数据（不包含用户相关信息）
+        _set_cached_data(cache_key, (server, server_status))
+
+    # 用户相关查询不缓存，因为是用户特定的
     user_server_task = (
         UserServer.get_or_none(user=user, server=server_id)
         if user
         else asyncio.sleep(0, result=None)
     )
+    user_info_task = (
+        User.get_or_none(id=user) if user else asyncio.sleep(0, result=None)
+    )
     cover_task = get_server_cover_url(server)
 
-    user_info_task = User.get_or_none(id=user)
-    (
-        server_status,
-        user_server,
-        user_info,
-        cover_url,
-    ) = await asyncio.gather(
-        server_status_task, user_server_task, user_info_task, cover_task
+    user_server, user_info, cover_url = await asyncio.gather(
+        user_server_task, user_info_task, cover_task
     )
 
     permission = (
@@ -132,6 +283,7 @@ async def GetServer_by_id(server_id: int, user: int | None) -> None | ServerDeta
         if user_info and user_info.role == "admin"
         else (user_server.role if user_server else "guest")
     )
+
     status_data = None
     if server_status and server_status.stat_data:
         stat_data = server_status.stat_data
@@ -248,26 +400,40 @@ async def GetServerOwners_by_id(server_id: int) -> GetServerManagers:
             status_code=status.HTTP_404_NOT_FOUND, detail="服务器不存在"
         )
 
-    # 查找服务器的所有者和管理员
-    owners = await UserServer.filter(server=server_id, role=SerRoleEnum.owner)
-    admins = await UserServer.filter(server=server_id, role=SerRoleEnum.admin)
+    # 批量查找服务器的所有者和管理员，预取用户信息
+    owners_task = UserServer.filter(
+        server=server_id, role=SerRoleEnum.owner
+    ).prefetch_related("user")
+    admins_task = UserServer.filter(
+        server=server_id, role=SerRoleEnum.admin
+    ).prefetch_related("user")
 
-    async def to_user_base(user_server) -> UserBase:
-        user = await user_server.user
-        avatar_url = await get_user_avatar_url(user)
+    owners, admins = await asyncio.gather(owners_task, admins_task)
+
+    # 批量获取头像URL
+    all_users = [us.user for us in owners + admins]
+    avatar_tasks = [get_user_avatar_url(user) for user in all_users]
+    avatar_urls = await asyncio.gather(*avatar_tasks)
+
+    # 创建用户ID到头像URL的映射
+    avatar_map = {
+        user.id: avatar_url for user, avatar_url in zip(all_users, avatar_urls)
+    }
+
+    # 转换为UserBase对象
+    def to_user_base(user_server) -> UserBase:
+        user = user_server.user
         return UserBase(
             id=user.id,
             display_name=user.display_name,
             role=user.role,
             is_active=user.is_active,
-            avatar_url=avatar_url,
+            avatar_url=avatar_map[user.id],
         )
 
-    # 并发转换管理员和所有者列表
-    admins_list, owners_list = await asyncio.gather(
-        asyncio.gather(*(to_user_base(admin) for admin in admins)),
-        asyncio.gather(*(to_user_base(owner) for owner in owners)),
-    )
+    # 转换管理员和所有者列表
+    admins_list = [to_user_base(admin) for admin in admins]
+    owners_list = [to_user_base(owner) for owner in owners]
 
     return GetServerManagers(admins=admins_list, owners=owners_list)
 
@@ -347,16 +513,18 @@ async def RemoveGalleryImage(server_id: int, image_id: int) -> None:
 
 # 获取所有服务器的玩家总和
 async def GetAllPlayersNum() -> ServerTotalPlayers:
-    # 并发获取每个服务器的玩家数量
-    server_statuses = await ServerStatus.all()
+    # 仅选择需要的字段，减少数据传输
+    server_statuses = await ServerStatus.all().only("stat_data")
 
-    return ServerTotalPlayers(
-        total_players=sum(
-            server_status.stat_data["players"]["online"]
-            for server_status in server_statuses
-            if server_status and server_status.stat_data
-        )
+    total_players = sum(
+        server_status.stat_data["players"]["online"]
+        for server_status in server_statuses
+        if server_status
+        and server_status.stat_data
+        and "players" in server_status.stat_data
     )
+
+    return ServerTotalPlayers(total_players=total_players)
 
 
 # 新增 update_server_by_id 方法，封装原有 update_server 逻辑
