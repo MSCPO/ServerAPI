@@ -321,12 +321,21 @@ from app.log import logger
     },
 )
 async def register(
-    request: str = Form(...),  # 接收字符串形式的 JSON
-    avatar: UploadFile = File(...),  # 接收上传的文件
+    password: str = Form(..., description="8-16 位密码，至少包含数字、大写字母、小写字母和特殊字符中的两种"),
+    display_name: str = Form(..., description="用户的显示名称，长度为 4-16 位"),
+    captcha_response: str = Form(..., description="hCaptcha 验证响应"),
+    avatar: UploadFile = File(..., description="用户头像文件"),
+    token: str | None = Form(None, description="用户注册的验证令牌（使用邮件链接验证时）"),
+    code: str | None = Form(None, description="6位数字验证码（使用验证码验证时）"),
 ):
-    request_data: dict = json.loads(request)
-    logger.info(f"Register request: {request_data}")
-    register_data = RegisterRequest(**request_data)
+    register_data = RegisterRequest(
+        password=password,
+        display_name=display_name,
+        token=token,
+        code=code,
+        captcha_response=captcha_response
+    )
+    logger.info(f"Register request: {register_data.model_dump()}")
 
     if not await verify_hcaptcha(register_data.captcha_response):
         raise HTTPException(
