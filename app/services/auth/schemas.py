@@ -25,10 +25,15 @@ class RegisterRequest(CaptchaBase):
         title="显示名称",
         description="用户的显示名称，长度为 4-16 位",
     )
-    token: str = Field(
-        ...,
+    token: str | None = Field(
+        None,
         title="验证令牌",
-        description="用户注册的验证令牌",
+        description="用户注册的验证令牌（使用邮件链接验证时）",
+    )
+    code: str | None = Field(
+        None,
+        title="验证码",
+        description="6位数字验证码（使用验证码验证时）",
     )
 
 

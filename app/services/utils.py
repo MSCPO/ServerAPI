@@ -47,6 +47,11 @@ def generate_token() -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
 
+def generate_verification_code() -> str:
+    """生成 6 位数验证码"""
+    return "".join(random.choices(string.digits, k=6))
+
+
 async def asentence() -> dict:
     """获取一言"""
     async with httpx.AsyncClient() as client:
@@ -59,6 +64,15 @@ async def get_token_data(token) -> dict[str, str]:
     verify_data: str = await redis_client.get(f"verify:{token}")
     if verify_data is None:
         raise HTTPException(status_code=404, detail="token 无效")
+    data: dict = json.loads(verify_data)
+    return data
+
+
+async def get_code_data(code: str) -> dict[str, str]:
+    """获取验证码数据"""
+    verify_data: str = await redis_client.get(f"verify_code:{code}")
+    if verify_data is None:
+        raise HTTPException(status_code=404, detail="验证码无效或已过期")
     data: dict = json.loads(verify_data)
     return data
 
@@ -87,6 +101,35 @@ async def send_verification_email(to_email: str, token: str):
     body = render_html_template(
         "template/email_verify.html",
         token=token,
+        fullyear=datetime.now(ZoneInfo("Asia/Shanghai")).year,
+        sentence=sentence,
+        sentence_from=author,
+        from_who=from_who,
+    )
+    msg.attach(MIMEText(body, "html", "utf-8"))
+
+    try:
+        await _send_email(from_email, password, msg, to_email)
+    except Exception as e:
+        logger.error(f"Failed to send email: {e}")
+
+
+async def send_verification_code_email(to_email: str, code: str):
+    """发送验证码邮件"""
+    from_email = settings.FROM_EMAIL
+    password = settings.FROM_EMAIL_PASSWORD
+
+    msg = MIMEMultipart()
+    msg["From"] = formataddr(pair=("MSCPO 验证系统", "support@crashvibe.cn"))
+    msg["To"] = to_email
+    msg["Subject"] = "[MSCPO] 邮箱验证码"
+    asentence_data = await asentence()
+    sentence = asentence_data["hitokoto"]
+    author = asentence_data["from"]
+    from_who = asentence_data["from_who"]
+    body = render_html_template(
+        "template/email_code_verify.html",
+        code=code,
         fullyear=datetime.now(ZoneInfo("Asia/Shanghai")).year,
         sentence=sentence,
         sentence_from=author,
