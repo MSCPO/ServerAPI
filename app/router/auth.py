@@ -1,10 +1,7 @@
-import uuid
-from io import BytesIO
-
-import ujson as json
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Depends,
     File,
     Form,
     HTTPException,
@@ -14,34 +11,36 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse
-from PIL import Image
 from pydantic import BaseModel, Field
 
 from app.config import settings
-from app.file_storage.utils import upload_file_to_s3
 from app.schemas.common import CaptchaBase, MessageResponse
 from app.services.auth.crud import (
-    verify_hcaptcha,
+    cleanup_verification_data,
+    create_user_account,
+    send_email_verification,
+    upload_avatar,
+    validate_avatar_file,
+    validate_user_data,
+    verify_token_or_code,
+    verify_verification_code,
+    verify_verification_token,
 )
 from app.services.auth.schemas import (
     AuthToken,
+    JWTData,
     RegisterRequest,
     UserLogin,
 )
+from app.services.auth.validation import (
+    validate_captcha_response,
+    validate_email_availability,
+)
 from app.services.conn.redis import redis_client
-from app.services.user.models import User
+from app.services.user.crud import get_current_user
 from app.services.utils import (
-    convert_to_webp,
-    generate_token,
-    generate_verification_code,
-    get_code_data,
-    get_token_data,
-    hash_password,
     send_verification_code_email,
     send_verification_email,
-    validate_email,
-    validate_password,
-    validate_username,
 )
 
 router = APIRouter()
@@ -150,44 +149,15 @@ async def verifyemail(
     background_tasks: BackgroundTasks,
     by: str | None = Query(None),
 ):
-    if not await verify_hcaptcha(request.captcha_response):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="无效的 hCaptcha 响应"
-        )
-    if await User.get_or_none(email=request.email):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
-
-    if not validate_email(request.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式错误"
-        )
+    await validate_captcha_response(request.captcha_response)
+    await validate_email_availability(request.email)
 
     if by == "code":
-        # 生成6位数验证码
-        code = generate_verification_code()
-        # 检查验证码是否有重复
-        while await redis_client.get(f"verify_code:{code}"):
-            code = generate_verification_code()
-
-        await redis_client.setex(
-            f"verify_code:{code}",
-            900,
-            json.dumps({"email": request.email, "verified": False}),
-        )
+        code = await send_email_verification(request.email, by="code")
         background_tasks.add_task(send_verification_code_email, request.email, code)
         return {"detail": "验证码已发送，请查收您的邮箱"}
     else:
-        # 原有的token验证逻辑
-        token = generate_token()
-        # 检擦 token 是否有重复
-        while await redis_client.get(f"verify:{token}"):
-            token = generate_token()
-
-        await redis_client.setex(
-            f"verify:{token}",
-            900,
-            json.dumps({"email": request.email, "verified": False}),
-        )
+        token = await send_email_verification(request.email)
         background_tasks.add_task(send_verification_email, request.email, token)
         return {"detail": "验证邮件已发送，请查收您的邮箱"}
 
@@ -209,13 +179,7 @@ async def verifyemail(
     },
 )
 async def verify(token: str):
-    verify_data = await get_token_data(token)
-    await redis_client.setex(
-        f"verify:{token}",
-        86400,
-        json.dumps({"email": verify_data["email"], "verified": True}),
-    )
-
+    await verify_verification_token(token)
     return {"detail": "Token 验证成功"}
 
 
@@ -244,22 +208,7 @@ async def verify(token: str):
     },
 )
 async def verify_code(code: str):
-    # 验证码格式检查
-    if not code.isdigit() or len(code) != 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
-        )
-
-    # 获取验证码数据
-    verify_data = await get_code_data(code)
-
-    # 更新验证码状态为已验证，延长有效期至24小时
-    await redis_client.setex(
-        f"verify_code:{code}",
-        86400,
-        json.dumps({"email": verify_data["email"], "verified": True}),
-    )
-
+    await verify_verification_code(code)
     return {"detail": "验证码验证成功"}
 
 
@@ -354,130 +303,39 @@ async def register(
     )
     logger.info(f"Register request: {register_data.model_dump()}")
 
-    if not await verify_hcaptcha(register_data.captcha_response):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="无效的 hCaptcha 响应",
-        )
+    # 验证 hCaptcha
+    await validate_captcha_response(register_data.captcha_response)
 
-    # 验证密码强度
-    if not validate_password(register_data.password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="密码必须 8～16 个字符，并包含至少一个数字、一个大写字母",
-        )
+    # 验证 Token 或验证码并获取邮箱
+    verify_data = await verify_token_or_code(register_data.token, register_data.code)
 
-    # 验证 Token 或验证码
-    if register_data.token:
-        # 使用 Token 验证
-        verify_data = await get_token_data(register_data.token)
-        if verify_data is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Token 未找到或已过期"
-            )
-        if not verify_data["verified"]:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="Token 未被验证"
-            )
-    elif register_data.code:
-        # 使用验证码验证
-        if not register_data.code.isdigit() or len(register_data.code) != 6:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
-            )
-        verify_data = await get_code_data(register_data.code)
-        if not verify_data["verified"]:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="验证码未被验证"
-            )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="必须提供验证令牌或验证码"
-        )
-    # 检查数据库中是否存在该邮箱
-    if await User.get_or_none(email=verify_data["email"]):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="邮箱已存在")
+    # 验证用户数据
+    await validate_user_data(
+        verify_data["email"], register_data.display_name, register_data.password
+    )
 
-    # 验证用户名是否唯一
-    if not validate_username(register_data.display_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="显示名称必须 (4-16 位中文、字毮、数字、下划线、减号)",
-        )
-
-    if await User.get_or_none(display_name=register_data.display_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="显示名称已存在"
-        )
-
+    # 验证头像文件
     if not isinstance(avatar.filename, str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件名无效"
         )
 
     content = await avatar.read()
-    if len(content) > 2 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件大小不能超过 2 MB"
-        )
+    await validate_avatar_file(content, avatar.filename)
 
-    try:
-        avatar.file.seek(0)  # 归零指针，确保后续读取正常
-        image = Image.open(BytesIO(await avatar.read()))
-        image.verify()  # 验证图片文件是否有效
+    # 上传头像
+    avatar_hash = await upload_avatar(content, avatar.filename)
 
-        # 检查图片格式
-        if image.format not in ["JPEG", "PNG", "WEBP"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件格式无效"
-            )
+    # 创建用户
+    user = await create_user_account(
+        verify_data["email"],
+        register_data.display_name,
+        register_data.password,
+        avatar_hash,
+    )
 
-        width, height = image.size
-        if width != height:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="头像必须是正方形"
-            )
-
-    except Exception as e:
-        logger.error(f"Failed to open image: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件无效"
-        ) from e
-
-    try:
-        avatar_hash = (
-            await upload_file_to_s3(convert_to_webp(content), avatar.filename)
-        )[1]
-    except Exception as e:
-        logger.error(f"Failed to upload avatar: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="头像上传失败"
-        ) from e
-
-    # 生成唯一用户名
-    username = f"mscpo_{uuid.uuid4().hex[:8]}"
-    while await User.get_or_none(username=username):
-        username = f"mscpo_{uuid.uuid4().hex[:8]}"
-
-    try:
-        user = await User.create(
-            username=username,
-            email=verify_data["email"],
-            display_name=register_data.display_name,
-            hashed_password=hash_password(register_data.password),
-            avatar_hash=avatar_hash,
-            is_active=True,
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="创建用户失败"
-        ) from e
-
-    # 删除 token 或验证码
-    if register_data.token:
-        await redis_client.delete(f"verify:{register_data.token}")
-    elif register_data.code:
-        await redis_client.delete(f"verify_code:{register_data.code}")
+    # 清理验证数据
+    await cleanup_verification_data(register_data.token, register_data.code)
 
     return {"detail": "用户注册成功", "user_id": user.id}
 
@@ -541,17 +399,15 @@ def get_hcaptcha_site_key():
         },
     },
 )
-async def logout(request: Request):
+async def logout(user: JWTData = Depends(get_current_user)):
     """
     注销当前用户，使 JWT token 失效
     """
-    # 统一用 request.state.user 认证
-    user = getattr(request.state, "user", None)
-    if user is None or not hasattr(user, "token"):
+    token = getattr(user, "token", None)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    token = user.token
     await redis_client.setex(f"token:invalid:{token}", 86400, "invalid")
     return {"detail": "注销成功"}

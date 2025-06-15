@@ -2,13 +2,14 @@ from typing import Annotated
 
 from fastapi import (
     APIRouter,
+    Depends,
     Form,
     HTTPException,
     Query,
-    Request,
     status,
 )
 
+from app.services.auth.schemas import JWTData
 from app.services.servers.crud import (
     AddGalleryImage,
     GetAllPlayersNum,
@@ -30,6 +31,7 @@ from app.services.servers.schemas import (
     ServerTotalPlayers,
     UpdateServerRequest,
 )
+from app.services.user.crud import get_optional_user
 
 router = APIRouter()
 
@@ -90,7 +92,7 @@ router = APIRouter()
     },
 )
 async def list_servers(
-    request: Request,
+    user: JWTData | None = Depends(get_optional_user),
     is_member: bool = Query(True, description="是否为成员服务器"),
     modes: str | None = Query(None, description="模式"),
     authModes: list[str] = Query(["OFFLINE", "YGGDRASIL", "OFFICIAL"]),
@@ -107,7 +109,7 @@ async def list_servers(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="limit 不能超过 50"
         )
-    user = request.state.user.id if request.state.user else None
+    user_id = user.id if user else None
     filter = ServerFilter(
         is_member=is_member,
         modes=modes,
@@ -119,7 +121,7 @@ async def list_servers(
         offset=offset,
         is_random=random,
         seed=seed,
-        user=user,
+        user=user_id,
         filter=filter,
     )
 
@@ -170,13 +172,13 @@ async def list_servers(
         },
     },
 )
-async def get_server(server_id: int, request: Request):
+async def get_server(server_id: int, user: JWTData | None = Depends(get_optional_user)):
     """
     获取指定 ID 服务器的详细信息。
 
     """
-    user = request.state.user.id if request.state.user else None
-    server = await GetServer_by_id(server_id, user)
+    user_id = user.id if user else None
+    server = await GetServer_by_id(server_id, user_id)
     if server is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器"
@@ -227,12 +229,13 @@ async def get_server(server_id: int, request: Request):
         },
     },
 )
-async def get_server_editor(server_id: int, request: Request):
+async def get_server_editor(
+    server_id: int, user: JWTData | None = Depends(get_optional_user)
+):
     """
     获取指定 ID 服务器的详细信息（编辑者）。
     """
-    current_user = request.state.user
-    if server := await GetServer_by_id_editor(server_id, current_user):
+    if server := await GetServer_by_id_editor(server_id, user):
         return server
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未找到该服务器")
 
@@ -268,13 +271,11 @@ async def get_server_editor(server_id: int, request: Request):
 async def update_server(
     server_id: int,
     update_data: Annotated[UpdateServerRequest, Form()],
-    request: Request,
+    user: JWTData | None = Depends(get_optional_user),
 ):
-    """
-    更新指定 ID 服务器的详细信息（编辑者）。
-    """
-    current_user = request.state.user
-    return await update_server_by_id(server_id, update_data, current_user)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+    return await update_server_by_id(server_id, update_data, user)
 
 
 # 返回这个服务器的所有管理人员
@@ -394,13 +395,11 @@ async def get_server_gallerys(server_id: int):
 async def add_server_gallerys(
     server_id: int,
     gallery_data: Annotated[GallerySchema, Form()],
-    request: Request,
+    user: JWTData | None = Depends(get_optional_user),
 ):
-    """
-    添加服务器画册图片。
-    """
-    current_user = request.state.user
-    await GetServer_by_id_editor(server_id, current_user)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+    await GetServer_by_id_editor(server_id, user)
     await AddGalleryImage(server_id, gallery_data)
     return {"detail": "成功添加服务器画册图片"}
 
@@ -433,13 +432,11 @@ async def add_server_gallerys(
 async def remove_server_gallerys(
     server_id: int,
     image_id: int,
-    request: Request,
+    user: JWTData | None = Depends(get_optional_user),
 ):
-    """
-    删除服务器画册图片。
-    """
-    current_user = request.state.user
-    await GetServer_by_id_editor(server_id, current_user)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+    await GetServer_by_id_editor(server_id, user)
     await RemoveGalleryImage(server_id, image_id)
     return {"detail": "成功删除服务器画册图片"}
 
