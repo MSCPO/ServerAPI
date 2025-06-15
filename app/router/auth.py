@@ -360,10 +360,6 @@ async def register(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="验证码必须是6位数字"
             )
         verify_data = await get_code_data(register_data.code)
-        if verify_data is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="验证码无效或已过期"
-            )
         if not verify_data["verified"]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="验证码未被验证"
