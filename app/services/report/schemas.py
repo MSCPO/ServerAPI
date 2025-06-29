@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.services.report.models import TicketPriority, TicketStatus, TicketType
+from app.models import TicketPriority, TicketStatus, TicketType
 
 
 class TicketCreateReport(BaseModel):

@@ -2,8 +2,8 @@
 
 from fastapi import HTTPException, status
 
+from app.models import User
 from app.services.auth.captcha import verify_hcaptcha
-from app.services.user.models import User
 from app.services.utils import validate_email, validate_password, validate_username
 
 

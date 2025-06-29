@@ -1,12 +1,13 @@
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from tortoise import fields
-from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.models import Model
 
 from app.services.conn.db import add_model
-from app.services.servers.models import Server
-from app.services.user.models import User
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 add_model(__name__)
 
@@ -64,10 +65,10 @@ class Ticket(Model):
     priority: TicketPriority = fields.IntEnumField(
         enum_type=TicketPriority, default=TicketPriority.MEDIUM
     )  # 工单优先级，默认是中优先级
-    creator: ForeignKeyFieldInstance[User] | None = fields.ForeignKeyField(
+    creator = fields.ForeignKeyField(
         "default.User", related_name="created_tickets", on_delete=fields.CASCADE
     )  # 创建者
-    assignee: ForeignKeyFieldInstance[User] | None = fields.ForeignKeyField(
+    assignee = fields.ForeignKeyField(
         "default.User",
         related_name="assigned_tickets",
         null=True,
@@ -77,12 +78,12 @@ class Ticket(Model):
     updated_at = fields.DatetimeField(auto_now=True)  # 更新时间
 
     # 关联服务器（适用于服务器相关工单）
-    server: ForeignKeyFieldInstance[Server] | None = fields.ForeignKeyField(
+    server = fields.ForeignKeyField(
         "default.Server", related_name="tickets", null=True, on_delete=fields.SET_NULL
     )  # 服务器
 
     # 举报相关字段
-    reported_user: ForeignKeyFieldInstance[User] | None = fields.ForeignKeyField(
+    reported_user = fields.ForeignKeyField(
         "default.User", related_name="reports", null=True, on_delete=fields.SET_NULL
     )  # 被举报用户
     reported_content_id = fields.IntField(null=True, index=True)  # 被举报内容 ID
@@ -108,7 +109,7 @@ class TicketLog(Model):
     )  # 关联工单
     old_status: TicketStatus = fields.IntEnumField(enum_type=TicketStatus)  # 旧状态
     new_status: TicketStatus = fields.IntEnumField(enum_type=TicketStatus)  # 新状态
-    changed_by: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    changed_by: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
         "default.User", related_name="ticket_logs", on_delete=fields.CASCADE
     )  # 操作人
     changed_at = fields.DatetimeField(auto_now_add=True)  # 变更时间

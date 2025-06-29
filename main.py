@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.core.auth_middleware import AuthMiddleware
+from app.middleware import AuthMiddleware
 from app.file_storage.cleanup import cleanup_unused_files
 from app.file_storage.sync import sync_bucket_periodically
 from app.log import logger

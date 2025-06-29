@@ -4,8 +4,7 @@ from ujson import dumps
 from app import logger
 from app.config import settings
 
-# 数据库连接配置
-DATABASE = {
+DATABASE: dict = {
     "connections": {"default": settings.DATABASE_URL},
     "apps": {
         "default": {
@@ -21,7 +20,6 @@ DATABASE = {
     "timezone": "Asia/Shanghai",
 }
 
-# 用于存储模型的列表
 models: list[str] = []
 
 

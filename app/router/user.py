@@ -2,9 +2,9 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.models import User, UserServer
 from app.services.auth.schemas import JWTData
 from app.services.user.crud import get_current_user
-from app.services.user.models import User, UserServer
 from app.services.user.schemas import User as UserSchema
 from app.services.user.schemas import UserPublicInfo
 from app.services.user.utils import get_user_avatar_url

@@ -3,9 +3,8 @@ from enum import Enum
 from tortoise import fields
 from tortoise.models import Model
 
-from app.file_storage.models import File
+from app.models.file import File
 from app.services.conn.db import add_model
-from app.services.servers.models import Server
 
 add_model(__name__)
 
@@ -62,9 +61,7 @@ class UserServer(Model):
     user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
         "default.User", on_delete=fields.CASCADE
     )
-    server: fields.ForeignKeyRelation[Server] = fields.ForeignKeyField(
-        "default.Server", on_delete=fields.CASCADE
-    )
+    server = fields.ForeignKeyField("default.Server", on_delete=fields.CASCADE)
     role: SerRoleEnum = fields.CharEnumField(max_length=50, enum_type=SerRoleEnum)
 
     class Meta:

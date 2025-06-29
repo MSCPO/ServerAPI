@@ -2,7 +2,7 @@ import uuid
 
 from app.config import settings
 from app.file_storage.conn import session
-from app.file_storage.models import File
+from app.models import File
 
 
 def get_file_extension(filename: str) -> str:

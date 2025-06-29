@@ -3,8 +3,8 @@ import asyncio
 from tortoise.signals import post_delete, post_save
 
 from app.log import logger
+from app.models import Server
 from app.services.conn.meilisearch import client
-from app.services.servers.models import Server
 
 
 @post_delete(Server)

@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
+from app.models import User
 from app.services.auth.auth import verify_token
 from app.services.auth.schemas import JWTData
-from app.services.user.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

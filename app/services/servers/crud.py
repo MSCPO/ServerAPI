@@ -3,13 +3,17 @@ import random
 
 from fastapi import HTTPException, UploadFile, status
 
-from app.services.auth.schemas import JWTData
-from app.services.servers.models import (
+from app.models import (
     Gallery,
     GalleryImage,
+    RoleEnum,
+    SerRoleEnum,
     Server,
     ServerStatus,
+    User,
+    UserServer,
 )
+from app.services.auth.schemas import JWTData
 from app.services.servers.schemas import (
     GallerySchema,
     GetServerManagers,
@@ -35,7 +39,6 @@ from app.services.servers.utils import (
     validate_tags,
     validate_version,
 )
-from app.services.user.models import RoleEnum, SerRoleEnum, User, UserServer
 from app.services.user.utils import get_user_avatar_url
 
 # 简单的内存缓存用于减少重复查询
@@ -84,7 +87,11 @@ def clear_server_cache():
 async def warmup_cache(server_ids: list[int]):
     """预热服务器缓存"""
     servers = await Server.filter(id__in=server_ids).prefetch_related("cover_hash")
-    statuses = await ServerStatus.filter(server_id__in=server_ids).order_by("-timestamp").prefetch_related("server")
+    statuses = (
+        await ServerStatus.filter(server_id__in=server_ids)
+        .order_by("-timestamp")
+        .prefetch_related("server")
+    )
 
     # 为每个服务器创建状态映射
     status_map = {}
@@ -535,9 +542,8 @@ async def update_server_by_id(
 ):
     from fastapi import HTTPException, status
 
+    from app.models import Server, User
     from app.services.servers.crud import GetServer_by_id_editor
-    from app.services.servers.models import Server
-    from app.services.user.models import User
 
     await GetServer_by_id_editor(server_id, current_user)
     server = await Server.get_or_none(id=server_id)

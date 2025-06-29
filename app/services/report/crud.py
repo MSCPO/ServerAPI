@@ -1,8 +1,7 @@
 from tortoise.exceptions import DoesNotExist
 
+from app.models import Ticket, TicketLog, TicketStatus
 from app.services.report.schemas import TicketCreateReport
-
-from .models import Ticket, TicketLog, TicketStatus
 
 
 class TicketCRUD:

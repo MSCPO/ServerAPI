@@ -1,4 +1,4 @@
-from app.services.user.models import User
+from app.models import User
 
 
 async def get_user_avatar_url(user_data: User) -> str | None:

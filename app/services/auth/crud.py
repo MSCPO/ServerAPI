@@ -9,6 +9,7 @@ from PIL import Image
 
 from app.file_storage.utils import upload_file_to_s3
 from app.log import logger
+from app.models import User
 from app.services.auth.auth import create_access_token
 from app.services.auth.captcha import verify_hcaptcha
 from app.services.auth.schemas import AuthToken, JWTData, UserLogin
@@ -17,7 +18,6 @@ from app.services.auth.validation import (
     validate_verification_code_format,
 )
 from app.services.conn.redis import redis_client
-from app.services.user.models import User
 from app.services.utils import (
     convert_to_webp,
     generate_token,

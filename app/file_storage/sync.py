@@ -2,8 +2,8 @@ import asyncio
 
 from app.config import settings
 from app.file_storage.conn import session
-from app.file_storage.models import File
 from app.log import logger
+from app.models import File
 
 
 async def _list_bucket_keys() -> list[str]:

@@ -4,11 +4,10 @@ from fastapi import HTTPException, UploadFile, status
 from PIL import Image
 
 from app import logger
-from app.file_storage.models import File
 from app.file_storage.utils import upload_file_to_s3
-from app.services.servers.stats_utils import get_server_stats
-from app.services.servers.models import GalleryImage, Server
+from app.models import File, GalleryImage, Server
 from app.services.servers.schemas import GallerySchema
+from app.services.servers.stats_utils import get_server_stats
 from app.services.utils import convert_to_webp
 
 

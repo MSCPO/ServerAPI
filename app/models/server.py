@@ -7,8 +7,8 @@ from tortoise.fields.base import Field
 from app.services.conn.db import add_model
 
 if TYPE_CHECKING:
-    from app.file_storage.models import File
-    from app.services.user.models import User
+    from app.models.file import File
+    from app.models.user import User
 
 add_model(__name__)
 
