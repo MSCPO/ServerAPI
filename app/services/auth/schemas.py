@@ -47,7 +47,7 @@ class JWTData(BaseModel):
     id: int = Field(..., title="用户 ID", description="JWT 中的用户 ID")  # 用户 ID
     exp: datetime = Field(
         default=datetime.now(ZoneInfo("Asia/Shanghai"))
-        + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS),
         title="过期时间",
         description="JWT 的过期时间",
     )
