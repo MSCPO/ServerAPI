@@ -94,7 +94,7 @@ router = APIRouter()
 async def list_servers(
     user: JWTData | None = Depends(get_optional_user),
     is_member: bool = Query(True, description="是否为成员服务器"),
-    modes: str | None = Query(None, description="模式"),
+    modes: str | None = Query(None, description="服务器类型"),
     authModes: list[str] = Query(["OFFLINE", "YGGDRASIL", "OFFICIAL"]),
     tags: list[str] = Query(None),
     limit: int = Query(5, ge=1),
