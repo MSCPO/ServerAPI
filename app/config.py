@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings, extra="allow"):
     DATABASE_URL: str = "sqlite:///./test.db"
     SECRET_KEY: str = "your-secret-key"
     ALGORITHM: str = "HS256"
