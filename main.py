@@ -20,7 +20,6 @@ from app.router.webhook import router as webhook_router
 from app.services.conn.db import disconnect, init_db
 from app.services.conn.meilisearch import init_meilisearch_index
 from app.services.conn.redis import redis_client
-from app.services.search.sync_index import sync_meilisearch_while
 from app.services.servers.get_stats import query_servers_periodically
 
 REDIS_LOCK_KEY = "query_servers_lock"
@@ -81,7 +80,6 @@ async def startup(app: FastAPI):
         await init_meilisearch_index()
         app.state.task = [
             asyncio.create_task(query_servers_periodically()),
-            asyncio.create_task(sync_meilisearch_while()),
             asyncio.create_task(sync_bucket_periodically()),
             asyncio.create_task(cleanup_unused_files()),
         ]
