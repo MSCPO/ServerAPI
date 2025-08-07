@@ -45,9 +45,13 @@ class AuthToken(BaseModel):
 class JWTData(BaseModel):
     sub: str = Field(..., title="用户名", description="JWT 中的用户名")  # 用户名
     id: int = Field(..., title="用户 ID", description="JWT 中的用户 ID")  # 用户 ID
-    exp: datetime = Field(
-        default=datetime.now(ZoneInfo("Asia/Shanghai"))
-        + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS),
-        title="过期时间",
-        description="JWT 的过期时间",
+    exp: int = Field(
+        default_factory=lambda: int(
+            (
+                datetime.now(ZoneInfo("Asia/Shanghai"))
+                + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+            ).timestamp()
+        ),
+        title="过期时间戳",
+        description="JWT 的过期时间戳",
     )
