@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 from io import BytesIO
 from time import time
-from zoneinfo import ZoneInfo
 
 import ujson as json
 from fastapi import HTTPException, Request, status
