@@ -17,7 +17,6 @@ DATABASE: dict = {
         "default_connection": "default",  # 使用默认数据库连接
     },
     "use_tz": False,
-    "timezone": "Asia/Shanghai",
 }
 
 models: list[str] = []

@@ -1,12 +1,14 @@
 import uuid
 from datetime import datetime
 from io import BytesIO
+from time import time
 from zoneinfo import ZoneInfo
 
 import ujson as json
 from fastapi import HTTPException, Request, status
 from PIL import Image
 
+from app.config import settings
 from app.file_storage.utils import upload_file_to_s3
 from app.log import logger
 from app.models import User
@@ -31,7 +33,7 @@ from app.services.utils import (
 
 async def update_last_login(user: User, ip: str):
     # 获取上海时区的当前时间
-    user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
+    user.last_login = datetime.now()
     user.last_login_ip = ip
     # 保存用户数据
     await user.save(update_fields=["last_login", "last_login_ip"])
@@ -57,7 +59,11 @@ async def login_user(user: UserLogin, request: Request) -> AuthToken:
     if client_ip is not None:
         await update_last_login(db_user, client_ip)
     access_token = create_access_token(
-        data=JWTData(sub=db_user.username, id=db_user.id)
+        data=JWTData(
+            exp=int(time() + settings.ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60),
+            sub=db_user.username,
+            id=db_user.id,
+        )
     )
     return AuthToken.model_validate(
         {"access_token": access_token, "token_type": "bearer"}
